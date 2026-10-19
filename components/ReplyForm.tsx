@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createReplyAction } from "@/app/actions/forum";
 import type { ActionState } from "@/app/actions/auth";
+import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 
 export function ReplyForm({ threadId, nickname }: { threadId: number; nickname: string }) {
@@ -23,6 +24,10 @@ export function ReplyForm({ threadId, nickname }: { threadId: number; nickname: 
         className="input resize-y"
         placeholder="友善回复，理性讨论…"
       />
+      <div className="mt-3">
+        <ImagePicker max={2} />
+        <p className="mt-1.5 text-xs text-muted">可附 2 张图片，上传前自动压缩。</p>
+      </div>
       <div className="mt-3 flex justify-end">
         <SubmitButton>↩︎ 回复</SubmitButton>
       </div>

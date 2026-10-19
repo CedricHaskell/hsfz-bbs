@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS replies (
   thread_id INTEGER NOT NULL,
   author_id INTEGER NOT NULL,
   content TEXT NOT NULL,
+  images TEXT DEFAULT '',
   created_at TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS thread_likes (
@@ -129,6 +130,11 @@ try {
 }
 try {
   db.exec("ALTER TABLE threads ADD COLUMN anonymous INTEGER DEFAULT 0");
+} catch {
+  /* 列已存在则忽略 */
+}
+try {
+  db.exec("ALTER TABLE replies ADD COLUMN images TEXT DEFAULT ''");
 } catch {
   /* 列已存在则忽略 */
 }

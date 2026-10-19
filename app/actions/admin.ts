@@ -87,6 +87,17 @@ export async function deleteThreadAction(formData: FormData): Promise<void> {
       /* 图片路径解析失败则跳过清理 */
     }
   }
+  // 清理回复中的图片
+  const replyImgRows = db
+    .prepare("SELECT images FROM replies WHERE thread_id = ? AND images != ''")
+    .all(threadId) as { images: string }[];
+  replyImgRows.forEach((r) => {
+    try {
+      (JSON.parse(r.images) as string[]).forEach((u) => removeUploadFile(u));
+    } catch {
+      /* 忽略 */
+    }
+  });
   db.prepare("DELETE FROM replies WHERE thread_id = ?").run(threadId);
   db.prepare("DELETE FROM thread_likes WHERE thread_id = ?").run(threadId);
   db.prepare("DELETE FROM thread_favorites WHERE thread_id = ?").run(threadId);

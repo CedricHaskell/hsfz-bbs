@@ -238,6 +238,36 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                     <span className="ml-auto">{i + 1} 楼</span>
                   </div>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{r.content}</p>
+                  {(() => {
+                    let imgs: string[] = [];
+                    try {
+                      imgs = r.images ? (JSON.parse(r.images) as string[]) : [];
+                    } catch {
+                      imgs = [];
+                    }
+                    if (!imgs.length) return null;
+                    return (
+                      <div className={`mt-2 grid gap-2 ${imgs.length === 1 ? "" : "grid-cols-2"}`}>
+                        {imgs.map((src) => (
+                          <a
+                            key={src}
+                            href={src}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block overflow-hidden rounded-md border border-line bg-soft"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={src}
+                              alt="回复图片"
+                              loading="lazy"
+                              className="max-h-64 w-full object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </li>
             ))}

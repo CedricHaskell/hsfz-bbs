@@ -90,12 +90,22 @@ export async function createReplyAction(
     return fail(
       `该帖位于年级群「${thread.board_name}」，仅限${thread.grade_lock}同学回复，可到「账号设置」中确认年级`
     );
-  db.prepare("INSERT INTO replies (thread_id, author_id, content, created_at) VALUES (?, ?, ?, ?)").run(
-    threadId,
-    user.id,
-    content,
-    nowStr()
+
+  // 回复图片（最多 2 张，浏览器端已压缩）
+  const files = formData.getAll("images").filter(
+    (f): f is File => f instanceof File && f.size > 0
   );
+  if (files.length > 2) return fail("回复图片最多 2 张");
+  const imagePaths: string[] = [];
+  try {
+    for (const f of files) imagePaths.push(await saveUploadImage(f, "reply"));
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "图片保存失败，请重试");
+  }
+
+  db.prepare(
+    "INSERT INTO replies (thread_id, author_id, content, images, created_at) VALUES (?, ?, ?, ?, ?)"
+  ).run(threadId, user.id, content, imagePaths.length ? JSON.stringify(imagePaths) : "", nowStr());
   db.prepare("UPDATE threads SET reply_count = reply_count + 1, last_reply_at = ? WHERE id = ?").run(
     nowStr(),
     threadId
@@ -126,6 +136,17 @@ export async function deleteOwnThreadAction(formData: FormData): Promise<void> {
       /* 图片路径解析失败则跳过清理 */
     }
   }
+  // 清理回复中的图片
+  const replyImgRows = db
+    .prepare("SELECT images FROM replies WHERE thread_id = ? AND images != ''")
+    .all(threadId) as { images: string }[];
+  replyImgRows.forEach((row) => {
+    try {
+      (JSON.parse(row.images) as string[]).forEach((u) => removeUploadFile(u));
+    } catch {
+      /* 忽略 */
+    }
+  });
   db.prepare("DELETE FROM replies WHERE thread_id = ?").run(threadId);
   db.prepare("DELETE FROM thread_likes WHERE thread_id = ?").run(threadId);
   db.prepare("DELETE FROM thread_favorites WHERE thread_id = ?").run(threadId);
