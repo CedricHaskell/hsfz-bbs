@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1080px; height:1620px; font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:linear-gradient(160deg,#e3f4f0 0%,#f4fafb 45%,#e7f1fa 100%); position:relative; overflow:hidden; }
+.blob1 { position:absolute; width:700px; height:700px; border-radius:50%; background:radial-gradient(circle,rgba(20,143,119,.14),transparent 70%); top:-220px; right:-180px; }
+.blob2 { position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(26,82,118,.10),transparent 70%); bottom:-180px; left:-160px; }
+.card { position:absolute; inset:56px; background:#ffffff; border-radius:40px; box-shadow:0 24px 70px rgba(13,90,84,.14); padding:78px 68px 56px; text-align:center; }
+.brand { display:flex; align-items:center; justify-content:center; gap:26px; }
+.brand img { width:118px; height:118px; border-radius:50%; box-shadow:0 4px 16px rgba(13,90,84,.18); }
+.brand-text { text-align:left; }
+.brand-name { font-size:58px; font-weight:800; color:#12414f; letter-spacing:2px; line-height:1.15; }
+.brand-sub { font-size:26px; color:#5b7280; margin-top:6px; letter-spacing:4px; }
+.slogan { margin-top:64px; font-size:76px; font-weight:900; letter-spacing:4px;
+  background:linear-gradient(90deg,#1a5276,#148f77); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.slogan-sub { margin-top:22px; font-size:32px; color:#41586b; letter-spacing:2px; }
+.divider { margin:52px auto 44px; width:120px; height:6px; border-radius:3px; background:linear-gradient(90deg,#1a5276,#148f77); }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; text-align:left; }
+.chip { display:flex; align-items:center; gap:16px; background:#f2f9f7; border:2px solid #dcece8; border-radius:18px; padding:22px 26px; }
+.chip .ico { font-size:38px; }
+.chip .t1 { font-size:31px; font-weight:700; color:#1f3d38; }
+.chip .t2 { font-size:21px; color:#718a94; margin-top:2px; }
+.feats { margin-top:44px; display:flex; justify-content:center; gap:38px; font-size:27px; color:#155e63; font-weight:600; }
+.qr-row { margin-top:56px; display:flex; align-items:center; justify-content:center; gap:44px; }
+.qr-row img { width:290px; height:290px; border-radius:22px; border:3px solid #e3efec; padding:12px; background:#fff; }
+.qr-text { text-align:left; }
+.qr-text .scan { font-size:40px; font-weight:800; color:#1f3d38; }
+.qr-text .url { font-size:30px; color:#0e7490; font-weight:700; margin-top:14px; letter-spacing:1px; }
+.qr-text .tip { font-size:22px; color:#7b929b; margin-top:12px; line-height:1.6; }
+.footer { position:absolute; left:0; right:0; bottom:42px; text-align:center; font-size:22px; color:#8aa4ad; letter-spacing:3px; }
+</style></head>
+<body>
+<div class="blob1"></div><div class="blob2"></div>
+<div class="card">
+  <div class="brand">
+    <img src="https://bbs.hsfz-bbs.cn/uploads/badge-c3f078f51f62.png" alt="校徽">
+    <div class="brand-text">
+      <div class="brand-name">HSFZ BBS</div>
+      <div class="brand-sub">华南师大附中校园论坛</div>
+    </div>
+  </div>
+  <div class="slogan">华附人自己的网上家园</div>
+  <div class="slogan-sub">学习 · 年级 · 球友 · 生活 · 交易，一个都不少</div>
+  <div class="divider"></div>
+  <div class="grid">
+    <div class="chip"><span class="ico">📚</span><div><div class="t1">学习互助 · 考试交流</div><div class="t2">问题目、找资料、吐槽考试</div></div></div>
+    <div class="chip"><span class="ico">🎓</span><div><div class="t1">年级群（初一~高三）</div><div class="t2">只和本年级的同学聊</div></div></div>
+    <div class="chip"><span class="ico">🏀</span><div><div class="t1">球友专区（六大球类）</div><div class="t2">约球、训练、赛况速报</div></div></div>
+    <div class="chip"><span class="ico">🛒</span><div><div class="t1">跳蚤市场 · 失物招领</div><div class="t2">闲置流转，丢了东西来这里</div></div></div>
+    <div class="chip"><span class="ico">💌</span><div><div class="t1">表白墙（可匿名）</div><div class="t2">大胆说出你的心意</div></div></div>
+    <div class="chip"><span class="ico">🍜</span><div><div class="t1">美食 · 社团 · 闲聊</div><div class="t2">食堂测评与社团安利</div></div></div>
+  </div>
+  <div class="feats"><span>✔ 发帖带图</span><span>✔ 头衔升级</span><span>✔ 深色模式</span><span>✔ 学生自建开源</span></div>
+  <div class="qr-row">
+    <img src="poster-qr.png" alt="二维码">
+    <div class="qr-text">
+      <div class="scan">扫码直达论坛</div>
+      <div class="url">bbs.hsfz-bbs.cn</div>
+      <div class="tip">注册时选好年级 · 名单内同学免审核<br>也可以微信长按识别二维码</div>
+    </div>
+  </div>
+  <div class="footer">进德修业 · 格物致知 ｜ 学生自建 · 开源项目 ｜ 完全免费</div>
+</div>
+</body></html>

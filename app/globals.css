@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f4fafb;
+  --fg: #24292f;
+  --mut: #5b7280;
+  --bd: #d5e5e8;
+  --card: #ffffff;
+  --soft: #eef6f8;
+  --input: #ffffff;
+  --link: #0369a1;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0c161d;
+  --fg: #d9e4ea;
+  --mut: #8ba0aa;
+  --bd: #1e323b;
+  --card: #11222b;
+  --soft: #172c36;
+  --input: #0e1d25;
+  --link: #56c1e0;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--bg);
+  --color-ink: var(--fg);
+  --color-muted: var(--mut);
+  --color-line: var(--bd);
+  --color-card: var(--card);
+  --color-soft: var(--soft);
+  --color-input: var(--input);
+  --color-link: var(--link);
+  --color-brand: #0e7490;
+  --color-brand-dark: #155e75;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@layer components {
+  .card {
+    @apply rounded-md border border-line bg-card;
+  }
+  .card-header {
+    @apply rounded-t-md border-b border-line bg-soft px-4 py-2.5 text-sm font-semibold;
+  }
+  .link {
+    @apply text-link hover:underline;
+  }
+  .btn {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft;
+  }
+  .btn-primary {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark;
+  }
+  .btn-xs {
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-card px-2 py-1 text-xs font-medium text-muted hover:bg-soft;
+  }
+  .btn-danger {
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border border-red-500/40 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400;
+  }
+  .input {
+    @apply w-full rounded-md border border-line bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}

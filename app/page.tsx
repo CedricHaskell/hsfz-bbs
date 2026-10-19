@@ -1,0 +1,119 @@
+import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth";
+import { allBoards, latestThreads, hotThreads, siteStats } from "@/lib/queries";
+import { ThreadList } from "@/components/ThreadList";
+import { fmtNum } from "@/lib/format";
+
+const CAT_ORDER = ["学习成长", "年级群", "生活娱乐", "球友", "交易互助", "情感联结", "官方"];
+const CAT_EMOJI: Record<string, string> = {
+  学习成长: "📖",
+  年级群: "🎓",
+  生活娱乐: "🎨",
+  球友: "🏀",
+  交易互助: "🤝",
+  情感联结: "💚",
+  官方: "📢",
+};
+
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  const boards = allBoards();
+  const grouped = CAT_ORDER.map((cat) => ({ cat, items: boards.filter((b) => b.category === cat) })).filter(
+    (g) => g.items.length
+  );
+  const threads = latestThreads(25);
+  const hot = hotThreads(5);
+  const stats = siteStats();
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-base font-semibold">板块导航</h2>
+          <span className="text-xs text-muted">共 {boards.length} 个板块</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {grouped.map(({ cat, items }) => (
+            <div key={cat} className="card p-3">
+              <p className="mb-2 text-xs font-semibold text-muted">
+                {CAT_EMOJI[cat]} {cat}
+              </p>
+              <ul className="space-y-1.5">
+                {items.map((b) => (
+                  <li key={b.id}>
+                    <Link
+                      href={`/b/${b.slug}`}
+                      className="group flex items-center justify-between gap-1 text-sm"
+                      title={b.description}
+                    >
+                      <span className="truncate group-hover:text-brand group-hover:underline">
+                        {b.icon} {b.name}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted">{b.thread_count}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <section className="card">
+          <div className="card-header flex items-center justify-between">
+            <span>🔥 最新动态</span>
+            {user ? (
+              <Link href="/new" className="btn-primary !px-2.5 !py-1 text-xs">
+                ✏️ 发帖
+              </Link>
+            ) : (
+              <Link href="/register" className="link text-xs font-medium">
+                注册并审核通过后即可发帖 →
+              </Link>
+            )}
+          </div>
+          <ThreadList threads={threads} />
+        </section>
+
+        <aside className="space-y-4">
+          <div className="card">
+            <div className="card-header">⚡ 热门话题</div>
+            <ol className="divide-y divide-line">
+              {hot.map((t, i) => (
+                <li key={t.id} className="flex gap-2 px-3 py-2.5 text-sm">
+                  <span className={`w-4 shrink-0 text-center font-semibold ${i < 3 ? "text-[#d1242f]" : "text-muted"}`}>
+                    {i + 1}
+                  </span>
+                  <Link href={`/t/${t.id}`} className="line-clamp-2 flex-1 hover:text-brand hover:underline">
+                    {t.title}
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="card">
+            <div className="card-header">📊 站点统计</div>
+            <dl className="grid grid-cols-2 gap-y-3 p-4 text-sm">
+              <dt className="text-muted">注册同学</dt>
+              <dd className="text-right font-semibold">{fmtNum(stats.users)}</dd>
+              <dt className="text-muted">主题帖子</dt>
+              <dd className="text-right font-semibold">{fmtNum(stats.threads)}</dd>
+              <dt className="text-muted">回复总数</dt>
+              <dd className="text-right font-semibold">{fmtNum(stats.replies)}</dd>
+              <dt className="text-muted">24 小时新帖</dt>
+              <dd className="text-right font-semibold">{fmtNum(stats.recent)}</dd>
+            </dl>
+          </div>
+
+          <div className="card p-4 text-center">
+            <p className="text-sm font-medium tracking-[0.3em] text-ink">进德修业</p>
+            <p className="mt-1 text-sm font-medium tracking-[0.3em] text-ink">格物致知</p>
+            <p className="mt-2 text-xs text-muted">华南师范大学附属中学</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

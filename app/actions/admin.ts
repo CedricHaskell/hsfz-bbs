@@ -1,0 +1,211 @@
+"use server";
+
+import fs from "node:fs";
+import crypto from "node:crypto";
+import path from "node:path";
+import { revalidatePath } from "next/cache";
+import { db, setSetting, getSetting, UPLOAD_DIR } from "@/lib/db";
+import { removeUploadFile } from "@/lib/upload";
+import { requireAdmin, destroyUserSessions } from "@/lib/auth";
+import type { ActionState } from "./auth";
+
+const fail = (message: string): ActionState => ({ message, ok: false });
+const okMsg = (message: string): ActionState => ({ message, ok: true });
+
+export async function approveUserAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  if (!userId) return;
+  db.prepare("UPDATE users SET status = 'approved', reject_reason = '' WHERE id = ?").run(userId);
+  revalidatePath("/", "layout");
+}
+
+export async function rejectUserAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 60);
+  if (!userId) return;
+  db.prepare("UPDATE users SET status = 'rejected', reject_reason = ? WHERE id = ?").run(reason, userId);
+  destroyUserSessions(userId);
+  revalidatePath("/", "layout");
+}
+
+export async function banUserAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  if (!userId || userId === admin.id) return;
+  db.prepare("UPDATE users SET banned = 1 WHERE id = ?").run(userId);
+  destroyUserSessions(userId);
+  revalidatePath("/", "layout");
+}
+
+export async function unbanUserAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  if (!userId) return;
+  db.prepare("UPDATE users SET banned = 0 WHERE id = ?").run(userId);
+  revalidatePath("/", "layout");
+}
+
+export async function setCustomTitleAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  const title = String(formData.get("custom_title") ?? "").trim().slice(0, 16);
+  if (!userId) return;
+  db.prepare("UPDATE users SET custom_title = ? WHERE id = ?").run(title, userId);
+  revalidatePath("/", "layout");
+}
+
+export async function setAdminRoleAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  const makeAdmin = String(formData.get("make") ?? "") === "admin";
+  if (!userId) return;
+  const target = db
+    .prepare("SELECT id, username, status, role FROM users WHERE id = ?")
+    .get(userId) as { id: number; username: string; status: string; role: string } | undefined;
+  if (!target) return;
+  // 不能修改自己的角色；创始人账号（id=1 的首个管理员）角色不可被他人修改；仅可操作已批准的账号
+  if (target.id === admin.id) return;
+  if (target.id === 1) return;
+  if (target.status !== "approved") return;
+  db.prepare("UPDATE users SET role = ? WHERE id = ?").run(makeAdmin ? "admin" : "user", userId);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteThreadAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const threadId = Number(formData.get("thread_id"));
+  if (!threadId) return;
+  const row = db.prepare("SELECT images FROM threads WHERE id = ?").get(threadId) as
+    | { images: string }
+    | undefined;
+  if (row?.images) {
+    try {
+      (JSON.parse(row.images) as string[]).forEach((u) => removeUploadFile(u));
+    } catch {
+      /* 图片路径解析失败则跳过清理 */
+    }
+  }
+  db.prepare("DELETE FROM replies WHERE thread_id = ?").run(threadId);
+  db.prepare("DELETE FROM thread_likes WHERE thread_id = ?").run(threadId);
+  db.prepare("DELETE FROM thread_favorites WHERE thread_id = ?").run(threadId);
+  db.prepare("DELETE FROM threads WHERE id = ?").run(threadId);
+  revalidatePath("/", "layout");
+}
+
+export async function togglePinAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const threadId = Number(formData.get("thread_id"));
+  if (!threadId) return;
+  db.prepare("UPDATE threads SET is_pinned = 1 - is_pinned WHERE id = ?").run(threadId);
+  revalidatePath("/", "layout");
+}
+
+export async function toggleFeatureAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const threadId = Number(formData.get("thread_id"));
+  if (!threadId) return;
+  db.prepare("UPDATE threads SET is_featured = 1 - is_featured WHERE id = ?").run(threadId);
+  revalidatePath("/", "layout");
+}
+
+/* ---------------- 站点设置 ---------------- */
+
+const BADGE_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/svg+xml": "svg",
+};
+
+export async function uploadBadgeAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+  if (admin.role !== "admin") return fail("仅管理员可修改站点徽章");
+  const file = formData.get("badge");
+  if (!(file instanceof File) || file.size === 0) return fail("请先选择一张图片");
+  if (file.size > 2 * 1024 * 1024) return fail("图片不能超过 2MB");
+  const ext = BADGE_EXT[file.type];
+  if (!ext) return fail("仅支持 JPG / PNG / WEBP / GIF / SVG 格式，建议使用方形透明底图片");
+
+  const name = `badge-${crypto.randomBytes(6).toString("hex")}.${ext}`;
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  fs.writeFileSync(path.join(UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
+
+  setSetting("site_badge", `/uploads/${name}`);
+  revalidatePath("/", "layout");
+  return okMsg("站点徽章已更新，全站生效");
+}
+
+export async function removeBadgeAction(): Promise<void> {
+  const admin = await requireAdmin();
+  if (admin.role !== "admin") return;
+  const old = getSetting("site_badge");
+  if (old.startsWith("/uploads/")) {
+    try {
+      fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(old)));
+    } catch {
+      /* 文件不存在则忽略 */
+    }
+  }
+  setSetting("site_badge", "");
+  revalidatePath("/", "layout");
+}
+
+/* ---------------- 校友名单（免审核注册白名单） ---------------- */
+
+export async function importWhitelistAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+  if (admin.role !== "admin") return fail("仅管理员可操作");
+  const raw = String(formData.get("roster") ?? "");
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (!lines.length) return fail("请粘贴名单内容，每行一条：姓名,学号,年级(可选)");
+
+  let added = 0;
+  let skipped = 0;
+  for (const line of lines) {
+    const parts = line
+      .split(/[,，\t]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length < 2) {
+      skipped++;
+      continue;
+    }
+    const [name, sid, grade] = parts;
+    if (!name || !sid || name.length > 20 || sid.length > 20) {
+      skipped++;
+      continue;
+    }
+    const info = db
+      .prepare(
+        "INSERT OR IGNORE INTO whitelist (real_name, student_id, grade, created_at) VALUES (?, ?, ?, datetime('now','localtime'))"
+      )
+      .run(name, sid, grade ?? "");
+    if (Number(info.changes) > 0) added++;
+    else skipped++;
+  }
+  revalidatePath("/", "layout");
+  return okMsg(
+    `导入完成：新增 ${added} 条${skipped ? `，跳过 ${skipped} 条（重复或格式错误）` : ""}`
+  );
+}
+
+export async function deleteWhitelistAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  if (admin.role !== "admin") return;
+  const id = Number(formData.get("whitelist_id"));
+  if (!id) return;
+  db.prepare("DELETE FROM whitelist WHERE id = ?").run(id);
+  revalidatePath("/", "layout");
+}
