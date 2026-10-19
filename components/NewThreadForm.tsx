@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { createThreadAction } from "@/app/actions/forum";
 import type { ActionState } from "@/app/actions/auth";
 import type { BoardRow } from "@/lib/queries";
+import { EmojiPicker } from "./EmojiPicker";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 
@@ -17,6 +18,7 @@ export function NewThreadForm({
   isAdmin: boolean;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createThreadAction, null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
   const [boardId, setBoardId] = useState<string>(defaultBoardId ? String(defaultBoardId) : "");
   const visible = isAdmin ? boards : boards.filter((b) => b.slug !== "announcements");
   const isConfession = visible.find((b) => String(b.id) === boardId)?.slug === "confession";
@@ -61,14 +63,23 @@ export function NewThreadForm({
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">正文</label>
-        <textarea
-          name="content"
-          required
-          minLength={2}
-          rows={8}
-          className="input resize-y"
-          placeholder="支持换行，请友善发言（遵守社区公约）"
-        />
+        <div className="relative">
+          <textarea
+            ref={contentRef}
+            name="content"
+            required
+            minLength={2}
+            rows={8}
+            className="input resize-y pr-10"
+            placeholder="支持 Markdown · @用户名 · $LaTeX$ 公式"
+          />
+          <div className="absolute right-2 top-2">
+            <EmojiPicker targetRef={contentRef} />
+          </div>
+        </div>
+        <p className="mt-1.5 text-xs text-muted">
+          支持 Markdown 语法、@用户名 提及、$LaTeX$ 公式（$x^2$）、表情。请友善发言（遵守社区公约）。
+        </p>
       </div>
       {isConfession && (
         <label className="flex cursor-pointer items-center gap-2 rounded-md border border-line bg-soft/60 px-3 py-2.5 text-sm">

@@ -14,6 +14,7 @@ import {
   deleteOwnThreadAction,
 } from "@/app/actions/forum";
 import { ReplyForm } from "@/components/ReplyForm";
+import { Markdown } from "@/components/Markdown";
 import {
   togglePinAction,
   toggleFeatureAction,
@@ -142,7 +143,7 @@ export default async function ThreadPage({
                 </span>
               )}
             </div>
-            <div className="mt-2 whitespace-pre-wrap text-[15px] leading-7">{thread.content}</div>
+            <Markdown content={thread.content} className="mt-2 text-[15px] leading-7" />
             {postImages.length > 0 && (
               <div className={`mt-3 grid gap-2 ${postImages.length === 1 ? "" : "grid-cols-2 sm:grid-cols-3"}`}>
                 {postImages.map((src) => (
@@ -280,7 +281,7 @@ export default async function ThreadPage({
                       </div>
                     );
                   })()}
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{r.content}</p>
+                  <Markdown content={r.content} className="mt-1 text-sm leading-6" />
                   {(() => {
                     let imgs: string[] = [];
                     try {
