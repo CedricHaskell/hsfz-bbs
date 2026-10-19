@@ -8,6 +8,17 @@ import { EmojiPicker } from "./EmojiPicker";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 
+const CAT_ORDER = ["学习成长", "年级群", "生活娱乐", "球友", "交易互助", "情感联结", "官方"];
+const CAT_EMOJI: Record<string, string> = {
+  学习成长: "📖",
+  年级群: "🎓",
+  生活娱乐: "🎨",
+  球友: "🏀",
+  交易互助: "🤝",
+  情感联结: "💚",
+  官方: "📢",
+};
+
 export function NewThreadForm({
   boards,
   defaultBoardId,
@@ -19,9 +30,21 @@ export function NewThreadForm({
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createThreadAction, null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
-  const [boardId, setBoardId] = useState<string>(defaultBoardId ? String(defaultBoardId) : "");
   const visible = isAdmin ? boards : boards.filter((b) => b.slug !== "announcements");
-  const isConfession = visible.find((b) => String(b.id) === boardId)?.slug === "confession";
+
+  // 两级选择：先大类，再板块
+  const defaultBoard = visible.find((b) => b.id === defaultBoardId);
+  const [cat, setCat] = useState<string>(defaultBoard?.category ?? "");
+  const [boardId, setBoardId] = useState<string>(defaultBoard ? String(defaultBoard.id) : "");
+  const cats = CAT_ORDER.filter((c) => visible.some((b) => b.category === c));
+  const catBoards = visible.filter((b) => b.category === cat);
+  const isConfession = boardId === String(visible.find((b) => b.slug === "confession")?.id);
+
+  function changeCat(c: string) {
+    setCat(c);
+    const first = visible.find((b) => b.category === c);
+    if (first) setBoardId(String(first.id));
+  }
 
   return (
     <form action={formAction} className="space-y-4 p-4">
@@ -30,25 +53,47 @@ export function NewThreadForm({
           {state.message}
         </div>
       )}
-      <div>
-        <label className="mb-1 block text-sm font-medium">选择板块</label>
-        <select
-          name="board_id"
-          defaultValue={defaultBoardId ?? ""}
-          required
-          className="input"
-          onChange={(e) => setBoardId(e.target.value)}
-        >
-          <option value="" disabled>
-            请选择板块…
-          </option>
-          {visible.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.icon} {b.name}
-              {b.grade_lock ? `（仅限${b.grade_lock}）` : ""} — {b.description}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium">① 选择大类</label>
+          <select
+            value={cat}
+            required
+            className="input"
+            onChange={(e) => changeCat(e.target.value)}
+          >
+            <option value="" disabled>
+              请选择大类…
             </option>
-          ))}
-        </select>
+            {cats.map((c) => (
+              <option key={c} value={c}>
+                {CAT_EMOJI[c] ?? ""} {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">② 选择板块</label>
+          <select
+            name="board_id"
+            value={boardId}
+            required
+            disabled={!cat}
+            className="input disabled:opacity-50"
+            onChange={(e) => setBoardId(e.target.value)}
+          >
+            {!cat ? (
+              <option value="">先选择大类…</option>
+            ) : (
+              catBoards.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.icon} {b.name}
+                  {b.grade_lock ? `（仅限${b.grade_lock}）` : ""}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">标题</label>
