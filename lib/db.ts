@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS replies (
   author_id INTEGER NOT NULL,
   content TEXT NOT NULL,
   images TEXT DEFAULT '',
+  reply_to INTEGER DEFAULT 0,
   created_at TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS thread_likes (
@@ -138,6 +139,11 @@ try {
 } catch {
   /* 列已存在则忽略 */
 }
+try {
+  db.exec("ALTER TABLE replies ADD COLUMN reply_to INTEGER DEFAULT 0");
+} catch {
+  /* 列已存在则忽略 */
+}
 
 /* 后补板块迁移：年级群（仅本年级同学可发言）+ 考试交流 */
 function ensureGradeBoards() {
@@ -159,11 +165,17 @@ function ensureGradeBoards() {
     if (db.prepare("SELECT id FROM boards WHERE slug = ?").get(slug)) continue;
     ins.run(slug, name, desc, icon, sort, lock);
   }
-  // 学习成长：考试交流
+  // 学习成长：考试交流、文学创作
   if (!db.prepare("SELECT id FROM boards WHERE slug = ?").get("exams")) {
     db.prepare(
       `INSERT INTO boards (slug, name, description, icon, category, sort)
        VALUES ('exams', '考试交流', '期中期末、周测月考的备考经验、题目讨论与考后吐槽', '📝', '学习成长', 15)`
+    ).run();
+  }
+  if (!db.prepare("SELECT id FROM boards WHERE slug = ?").get("literature")) {
+    db.prepare(
+      `INSERT INTO boards (slug, name, description, icon, category, sort)
+       VALUES ('literature', '文学创作', '散文、诗歌、小说——写下属于你的故事', '✍️', '学习成长', 16)`
     ).run();
   }
 }

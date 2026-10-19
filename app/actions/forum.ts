@@ -91,6 +91,12 @@ export async function createReplyAction(
       `该帖位于年级群「${thread.board_name}」，仅限${thread.grade_lock}同学回复，可到「账号设置」中确认年级`
     );
 
+  // 引用回复：校验被引用楼层属于本帖
+  const replyTo = Number(formData.get("reply_to")) || 0;
+  if (replyTo && !db.prepare("SELECT id FROM replies WHERE id = ? AND thread_id = ?").get(replyTo, threadId)) {
+    return fail("引用的楼层不存在或已被删除");
+  }
+
   // 回复图片（最多 2 张，浏览器端已压缩）
   const files = formData.getAll("images").filter(
     (f): f is File => f instanceof File && f.size > 0
@@ -104,8 +110,15 @@ export async function createReplyAction(
   }
 
   db.prepare(
-    "INSERT INTO replies (thread_id, author_id, content, images, created_at) VALUES (?, ?, ?, ?, ?)"
-  ).run(threadId, user.id, content, imagePaths.length ? JSON.stringify(imagePaths) : "", nowStr());
+    "INSERT INTO replies (thread_id, author_id, content, images, reply_to, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(
+    threadId,
+    user.id,
+    content,
+    imagePaths.length ? JSON.stringify(imagePaths) : "",
+    replyTo,
+    nowStr()
+  );
   db.prepare("UPDATE threads SET reply_count = reply_count + 1, last_reply_at = ? WHERE id = ?").run(
     nowStr(),
     threadId

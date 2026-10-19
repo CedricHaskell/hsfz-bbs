@@ -89,7 +89,7 @@ export function threadReplies(threadId: number) {
        WHERE r.thread_id = ? ORDER BY r.created_at ASC`
     )
     .all(threadId) as Array<{
-      id: number; content: string; images: string; created_at: string; nickname: string; username: string;
+      id: number; content: string; images: string; reply_to: number; created_at: string; nickname: string; username: string;
       avatar: string; custom_title: string; post_count: number;
     }>;
 }

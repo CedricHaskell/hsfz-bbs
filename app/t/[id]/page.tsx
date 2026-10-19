@@ -26,8 +26,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: thread ? thread.title : "帖子" };
 }
 
-export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ThreadPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ quote?: string }>;
+}) {
   const { id } = await params;
+  const { quote: quoteParam } = await searchParams;
   const tid = Number(id);
   if (!Number.isInteger(tid) || tid <= 0) notFound();
   const thread = threadById(tid);
@@ -42,6 +49,20 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     postImages = [];
   }
   const user = await getCurrentUser();
+  // 引用回复：楼层映射（回复 id → 楼层号/作者/内容）
+  const floorMap = new Map(
+    replies.map((r, i) => [r.id, { floor: i + 1, nickname: r.nickname, content: r.content }])
+  );
+  const quoteId = Number(quoteParam) || 0;
+  const quotedReply = quoteId ? replies.find((r) => r.id === quoteId) : undefined;
+  const quote = quotedReply
+    ? {
+        replyTo: quotedReply.id,
+        floor: floorMap.get(quotedReply.id)!.floor,
+        nickname: quotedReply.nickname,
+        content: quotedReply.content,
+      }
+    : undefined;
   const liked = user
     ? !!db.prepare("SELECT 1 AS x FROM thread_likes WHERE user_id = ? AND thread_id = ?").get(user.id, tid)
     : false;
@@ -235,8 +256,30 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                     </Link>
                     <TitleBadge customTitle={r.custom_title} postCount={r.post_count} />
                     <span>{timeAgo(r.created_at)}</span>
+                    {user && (
+                      <Link
+                        href={`/t/${thread.id}?quote=${r.id}#reply-form`}
+                        className="text-brand/80 hover:text-brand hover:underline"
+                      >
+                        引用
+                      </Link>
+                    )}
                     <span className="ml-auto">{i + 1} 楼</span>
                   </div>
+                  {(() => {
+                    const ref = r.reply_to ? floorMap.get(r.reply_to) : undefined;
+                    if (!ref) return null;
+                    return (
+                      <div className="mb-2 rounded-md border-l-4 border-brand/50 bg-soft/70 px-3 py-1.5 text-xs text-muted">
+                        回复 <span className="font-semibold text-brand">@{ref.nickname}</span> 的 #{ref.floor}{" "}
+                        楼：
+                        <span className="ml-1">
+                          {ref.content.slice(0, 60)}
+                          {ref.content.length > 60 ? "…" : ""}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{r.content}</p>
                   {(() => {
                     let imgs: string[] = [];
@@ -278,7 +321,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       {/* 回复框 */}
       {user ? (
         !thread.grade_lock || isAdmin || user.grade === thread.grade_lock ? (
-          <ReplyForm threadId={thread.id} nickname={user.nickname} />
+          <ReplyForm threadId={thread.id} nickname={user.nickname} quote={quote} />
         ) : (
           <div className="card mt-4 p-6 text-center text-sm text-muted">
             🔒 「{thread.board_name}」是年级群，仅限{thread.grade_lock}同学回复
