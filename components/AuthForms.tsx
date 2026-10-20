@@ -64,8 +64,19 @@ export function RegisterForm() {
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">昵称</label>
-        <input name="nickname" required maxLength={12} className="input" placeholder="论坛里展示的名字" />
+        <label className="mb-1 block text-sm font-medium">真实姓名</label>
+        <input
+          name="real_name"
+          required
+          minLength={2}
+          maxLength={20}
+          className="input"
+          placeholder="与学籍一致的姓名（昵称默认用它，登录后可改）"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">学号</label>
+        <input name="student_id" required maxLength={20} className="input" placeholder="与学籍一致的学号" />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">年级</label>
@@ -81,6 +92,24 @@ export function RegisterForm() {
         </select>
       </div>
       <div>
+        <label className="mb-1 block text-sm font-medium">手机号</label>
+        <input
+          name="phone"
+          required
+          pattern="1[3-9][0-9]{9}"
+          maxLength={11}
+          className="input"
+          placeholder="11 位手机号（用于找回密码）"
+          title="11 位手机号"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">
+          邮箱<span className="ml-1 text-xs text-muted">（选填）</span>
+        </label>
+        <input name="email" type="email" className="input" placeholder="选填" />
+      </div>
+      <div>
         <label className="mb-1 block text-sm font-medium">密码</label>
         <input name="password" type="password" required minLength={6} className="input" placeholder="至少 6 位" />
       </div>
@@ -88,18 +117,6 @@ export function RegisterForm() {
         <label className="mb-1 block text-sm font-medium">确认密码</label>
         <input name="password2" type="password" required minLength={6} className="input" placeholder="再输入一次" />
       </div>
-      <details className="rounded-md border border-line bg-soft/60 px-3 py-2.5">
-        <summary className="cursor-pointer select-none text-sm font-medium text-brand">
-          🎫 我在校友名单里（免审核通道，选填）
-        </summary>
-        <div className="mt-3 space-y-3">
-          <p className="text-xs text-muted">
-            管理员已导入校友名单（姓名 + 学号）。信息匹配成功的账号<strong>免审核直接开通</strong>；不匹配或留空则进入正常人工审核。
-          </p>
-          <input name="real_name" maxLength={20} className="input" placeholder="真实姓名" />
-          <input name="student_id" maxLength={20} className="input" placeholder="学号" />
-        </div>
-      </details>
       <SubmitButton className="btn-primary w-full justify-center" pendingText="提交中…">
         提交注册申请
       </SubmitButton>

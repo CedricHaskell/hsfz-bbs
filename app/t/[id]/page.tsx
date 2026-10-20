@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { threadById, threadReplies } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
@@ -36,6 +36,8 @@ export default async function ThreadPage({
 }) {
   const { id } = await params;
   const { quote: quoteParam } = await searchParams;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const tid = Number(id);
   if (!Number.isInteger(tid) || tid <= 0) notFound();
   const thread = threadById(tid);
@@ -49,7 +51,6 @@ export default async function ThreadPage({
   } catch {
     postImages = [];
   }
-  const user = await getCurrentUser();
   // 引用回复：楼层映射（回复 id → 楼层号/作者/内容）
   const floorMap = new Map(
     replies.map((r, i) => [r.id, { floor: i + 1, nickname: r.nickname, content: r.content }])

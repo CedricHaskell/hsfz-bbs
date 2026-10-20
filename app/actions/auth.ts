@@ -8,54 +8,78 @@ import { createSession, destroyCurrentSession } from "@/lib/auth";
 export type ActionState = { message: string; ok: boolean } | null;
 
 const fail = (message: string): ActionState => ({ message, ok: false });
+const okMsg = (message: string): ActionState => ({ message, ok: true });
+
+export async function resetPasswordAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const password2 = String(formData.get("password2") ?? "");
+  if (!username || !phone) return fail("请填写用户名和注册时的手机号");
+  if (password.length < 6) return fail("新密码至少 6 位");
+  if (password !== password2) return fail("两次输入的新密码不一致");
+  const row = db
+    .prepare("SELECT id, phone FROM users WHERE username = ?")
+    .get(username) as { id: number; phone: string } | undefined;
+  if (!row) return fail("用户不存在");
+  if (!row.phone) return fail("该账号未登记手机号，请联系管理员重置密码");
+  if (row.phone !== phone) return fail("手机号与注册信息不一致");
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(
+    bcrypt.hashSync(password, 10),
+    row.id
+  );
+  return okMsg("密码已重置，请使用新密码登录");
+}
 
 export async function registerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
-  const nickname = String(formData.get("nickname") ?? "").trim();
-  const grade = String(formData.get("grade") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const password2 = String(formData.get("password2") ?? "");
   const realName = String(formData.get("real_name") ?? "").trim();
   const studentId = String(formData.get("student_id") ?? "").trim();
+  const grade = String(formData.get("grade") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const password2 = String(formData.get("password2") ?? "");
 
   if (!/^[a-z0-9_]{3,20}$/.test(username))
     return fail("用户名只能包含小写字母、数字、下划线，长度 3-20 位");
-  if (!nickname || nickname.length > 12) return fail("昵称不能为空，且不超过 12 个字");
+  if (realName.length < 2 || realName.length > 20) return fail("请填写真实姓名（2-20 字）");
+  if (!studentId || studentId.length > 20) return fail("请填写学号");
   if (![...GRADES, ""].includes(grade)) return fail("请选择正确的年级");
+  if (!/^1[3-9]\d{9}$/.test(phone)) return fail("请填写正确的 11 位手机号（用于找回密码）");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("邮箱格式不正确");
   if (password.length < 6) return fail("密码至少 6 位");
   if (password !== password2) return fail("两次输入的密码不一致");
   if (db.prepare("SELECT id FROM users WHERE username = ?").get(username))
     return fail("该用户名已被注册");
 
-  // 校友名单免审核：填写了姓名+学号则尝试匹配未使用的白名单条目
-  let fastTrack = false;
-  let wlEntry: { id: number; grade: string } | null = null;
-  if (realName || studentId) {
-    if (!realName || !studentId) return fail("如需免审核注册，请同时填写真实姓名和学号");
-    wlEntry =
-      (db
-        .prepare("SELECT id, grade FROM whitelist WHERE real_name = ? AND student_id = ? AND used_by = 0")
-        .get(realName, studentId) as { id: number; grade: string } | undefined) ?? null;
-  }
+  // 实名注册：姓名 + 学号与名单匹配的直接开通，否则进入人工审核
+  const wlEntry =
+    (db
+      .prepare("SELECT id, grade FROM whitelist WHERE real_name = ? AND student_id = ? AND used_by = 0")
+      .get(realName, studentId) as { id: number; grade: string } | undefined) ?? null;
 
   const status = wlEntry ? "approved" : "pending";
   const finalGrade = wlEntry ? wlEntry.grade || grade : grade;
+  // 昵称默认使用真实姓名，登录后可在「账号设置」中修改
   const info = db
     .prepare(
-      `INSERT INTO users (username, password_hash, nickname, grade, status, created_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now','localtime'))`
+      `INSERT INTO users (username, password_hash, nickname, grade, phone, email, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))`
     )
-    .run(username, bcrypt.hashSync(password, 10), nickname, finalGrade, status);
+    .run(username, bcrypt.hashSync(password, 10), realName, finalGrade, phone, email, status);
 
   if (wlEntry) {
     db.prepare("UPDATE whitelist SET used_by = ? WHERE id = ?").run(
       Number(info.lastInsertRowid),
       wlEntry.id
     );
-    fastTrack = true;
   }
 
-  redirect(fastTrack ? "/login?registered=1&fast=1" : "/login?registered=1");
+  redirect(wlEntry ? "/login?registered=1&fast=1" : "/login?registered=1");
 }
 
 export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

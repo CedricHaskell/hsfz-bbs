@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { LoginForm } from "@/components/AuthForms";
@@ -33,6 +34,11 @@ export default async function LoginPage({
       <div className="card p-5">
         <LoginForm />
       </div>
+      <p className="mt-3 text-center text-sm">
+        <Link href="/forgot" className="link">
+          忘记密码？
+        </Link>
+      </p>
     </div>
   );
 }

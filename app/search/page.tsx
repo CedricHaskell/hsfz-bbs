@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
 import { searchThreads } from "@/lib/queries";
 import { ThreadList } from "@/components/ThreadList";
 
@@ -8,6 +10,8 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const { q } = await searchParams;
   const query = (q ?? "").trim();
   const results = query ? searchThreads(query) : [];

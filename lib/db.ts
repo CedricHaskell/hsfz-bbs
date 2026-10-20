@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS users (
   banned INTEGER DEFAULT 0,
   custom_title TEXT DEFAULT '',
   grade TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  email TEXT DEFAULT '',
   created_at TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -144,6 +146,16 @@ try {
 } catch {
   /* 列已存在则忽略 */
 }
+try {
+  db.exec("ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''");
+} catch {
+  /* 列已存在则忽略 */
+}
+try {
+  db.exec("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''");
+} catch {
+  /* 列已存在则忽略 */
+}
 
 /* 后补板块迁移：年级群（仅本年级同学可发言）+ 考试交流 */
 function ensureGradeBoards() {
@@ -178,6 +190,13 @@ function ensureGradeBoards() {
        VALUES ('literature', '文学创作', '散文、诗歌、小说——写下属于你的故事', '✍️', '学习成长', 16)`
     ).run();
   }
+  // 游戏分区：游戏讨论
+  if (!db.prepare("SELECT id FROM boards WHERE slug = ?").get("games")) {
+    db.prepare(
+      `INSERT INTO boards (slug, name, description, icon, category, sort)
+       VALUES ('games', '游戏讨论', '聊你喜欢的游戏，组队开黑、攻略交流', '🎮', '游戏', 58)`
+    ).run();
+  }
 }
 
 /* 后补板块迁移：球友分类（老数据库没有则插入，并各送一条示例帖） */
@@ -190,6 +209,8 @@ function ensureSportsBoards() {
     ["badminton", "羽毛球", "约球、夜羽、装备交流", "🏸", 55, "su2027", "夜羽常驻名单更新：每周三、五晚"],
     ["tabletennis", "乒乓球", "约战与技术交流", "🏓", 56, "liu2026", "乒乓区新到两块胶皮，放学来试打"],
     ["volleyball", "排球", "气排 / 硬排，约球训练", "🏐", 57, "su2027", "周日早上气排球局，体育馆见"],
+    ["tennis", "网球", "网球约球与训练交流", "🎾", 58, "chen2026", "网球场周三晚有局，缺两人"],
+    ["pickleball", "匹克球", "新兴网红球类，一起来玩", "🥒", 59, "wang2028", "匹克球新手局：周日体育馆侧厅"],
   ];
   const insBoard = db.prepare(
     "INSERT INTO boards (slug, name, description, icon, category, sort) VALUES (?, ?, ?, ?, '球友', ?)"

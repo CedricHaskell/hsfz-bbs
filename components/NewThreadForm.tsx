@@ -8,12 +8,13 @@ import { EmojiPicker } from "./EmojiPicker";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 
-const CAT_ORDER = ["学习成长", "年级群", "生活娱乐", "球友", "交易互助", "情感联结", "官方"];
+const CAT_ORDER = ["学习成长", "年级群", "生活娱乐", "球友", "游戏", "交易互助", "情感联结", "官方"];
 const CAT_EMOJI: Record<string, string> = {
   学习成长: "📖",
   年级群: "🎓",
   生活娱乐: "🎨",
   球友: "🏀",
+  游戏: "🎮",
   交易互助: "🤝",
   情感联结: "💚",
   官方: "📢",
