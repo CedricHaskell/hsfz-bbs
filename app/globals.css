@@ -64,28 +64,28 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-md border border-line bg-card;
+    @apply rounded-md border-[1.5px] border-line bg-card;
   }
   .card-header {
-    @apply rounded-t-md border-b border-line bg-soft px-4 py-2.5 text-sm font-semibold;
+    @apply rounded-t-md border-b-[1.5px] border-line bg-soft px-4 py-2.5 text-sm font-semibold;
   }
   .link {
     @apply text-link hover:underline;
   }
   .btn {
-    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft;
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border-[1.5px] border-line bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft;
   }
   .btn-primary {
     @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark;
   }
   .btn-xs {
-    @apply inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-card px-2 py-1 text-xs font-medium text-muted hover:bg-soft;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border-[1.5px] border-line bg-card px-2 py-1 text-xs font-medium text-muted hover:bg-soft;
   }
   .btn-danger {
-    @apply inline-flex cursor-pointer items-center gap-1 rounded border border-red-500/40 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border-[1.5px] border-red-500/40 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400;
   }
   .input {
-    @apply w-full rounded-md border border-line bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/20;
+    @apply w-full rounded-md border-[1.5px] border-line bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/20;
   }
   .pill {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
@@ -122,7 +122,7 @@ body {
 .markdown-body pre {
   background: var(--hljs-bg);
   color: var(--primary);
-  border: 1px solid var(--primary-low);
+  border: 1.5px solid var(--primary-low);
   padding: 12px 14px;
   border-radius: 8px;
   overflow-x: auto;
@@ -136,9 +136,9 @@ body {
   margin: 0.75em 0;
 }
 .markdown-body table { border-collapse: collapse; margin: 0.75em 0; width: 100%; font-size: 0.95em; }
-.markdown-body th, .markdown-body td { border: 1px solid var(--primary-low); padding: 6px 10px; }
+.markdown-body th, .markdown-body td { border: 1.5px solid var(--primary-low); padding: 6px 10px; }
 .markdown-body th { font-weight: 700; }
 .markdown-body a { color: var(--tertiary); text-decoration: underline; }
 .markdown-body img { max-width: 100%; border-radius: 8px; }
-.markdown-body hr { border: none; border-top: 1px solid var(--primary-low); margin: 1em 0; }
+.markdown-body hr { border: none; border-top: 1.5px solid var(--primary-low); margin: 1em 0; }
 .markdown-body .katex-display { overflow-x: auto; padding: 2px 0; }

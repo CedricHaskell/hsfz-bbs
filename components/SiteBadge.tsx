@@ -8,7 +8,7 @@ export default async function SiteBadge({ className = "h-7 w-7" }: { className?:
       <img
         src={badge}
         alt="站点徽章"
-        className={`${className} shrink-0 rounded-full border border-line object-cover`}
+        className={`${className} shrink-0 rounded-full border-[1.5px] border-line object-cover`}
       />
     );
   }

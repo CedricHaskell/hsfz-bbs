@@ -72,7 +72,7 @@ export function ImagePicker({ max = 4, name = "images" }: { max?: number; name?:
             <img
               src={src}
               alt={`图片 ${i + 1}`}
-              className="h-20 w-20 rounded-md border border-line object-cover"
+              className="h-20 w-20 rounded-md border-[1.5px] border-line object-cover"
             />
             <button
               type="button"
@@ -89,7 +89,7 @@ export function ImagePicker({ max = 4, name = "images" }: { max?: number; name?:
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-line text-xs text-muted hover:bg-soft disabled:opacity-50"
+            className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-[1.5px] border-dashed border-line text-xs text-muted hover:bg-soft disabled:opacity-50"
           >
             <span className="text-xl">🖼️</span>
             {busy ? "处理中…" : "添加图片"}

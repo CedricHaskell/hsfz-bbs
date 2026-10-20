@@ -26,7 +26,7 @@ export function ThreadList({
     );
   }
   return (
-    <div className="divide-y divide-line">
+    <div className="divide-y-[1.5px] divide-line">
       {threads.map((t) => (
         <ThreadRowItem key={t.id} t={t} showBoard={showBoard} />
       ))}

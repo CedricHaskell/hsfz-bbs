@@ -94,7 +94,7 @@ export default async function ThreadPage({
 
       {/* 主帖 */}
       <article className="card">
-        <div className="border-b border-line px-4 py-3">
+        <div className="border-b-[1.5px] border-line px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             {thread.is_pinned === 1 && (
               <span className="pill bg-red-500/10 text-red-600 dark:text-red-400">置顶</span>
@@ -153,7 +153,7 @@ export default async function ThreadPage({
                     href={src}
                     target="_blank"
                     rel="noreferrer"
-                    className="block overflow-hidden rounded-md border border-line bg-soft"
+                    className="block overflow-hidden rounded-md border-[1.5px] border-line bg-soft"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -173,7 +173,7 @@ export default async function ThreadPage({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 border-t-[1.5px] border-line px-4 py-2.5">
           {user ? (
             <form action={toggleLikeAction}>
               <input type="hidden" name="thread_id" value={thread.id} />
@@ -245,7 +245,7 @@ export default async function ThreadPage({
         {replies.length === 0 ? (
           <p className="px-4 py-10 text-center text-muted">还没有回复，抢个沙发？</p>
         ) : (
-          <ol className="divide-y divide-line">
+          <ol className="divide-y-[1.5px] divide-line">
             {replies.map((r, i) => (
               <li key={r.id} id={`reply-${r.id}`} className="flex scroll-mt-24 gap-3 px-4 py-3">
                 <Link href={`/u/${r.username}`} className="shrink-0">
@@ -299,7 +299,7 @@ export default async function ThreadPage({
                             href={src}
                             target="_blank"
                             rel="noreferrer"
-                            className="block overflow-hidden rounded-md border border-line bg-soft"
+                            className="block overflow-hidden rounded-md border-[1.5px] border-line bg-soft"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img

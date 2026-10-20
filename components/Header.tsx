@@ -14,7 +14,7 @@ export default async function Header() {
   const openTickets = user?.role === "admin" ? openTicketCount() : 0;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-header shadow-sm">
+    <header className="sticky top-0 z-40 border-b-[1.5px] border-line bg-header shadow-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2 text-[15px] font-semibold text-ink">
           <SiteBadge className="h-8 w-8" />
@@ -55,7 +55,7 @@ export default async function Header() {
             <input
               name="q"
               placeholder="搜索帖子…"
-              className="h-8 w-40 rounded-md border border-line bg-input pl-3 pr-8 text-sm text-ink outline-none transition-all placeholder:text-muted/60 focus:w-52"
+              className="h-8 w-40 rounded-md border-[1.5px] border-line bg-input pl-3 pr-8 text-sm text-ink outline-none transition-all placeholder:text-muted/60 focus:w-52"
             />
             <button
               type="submit"
@@ -81,8 +81,8 @@ export default async function Header() {
               <summary className="flex cursor-pointer list-none rounded-full ring-2 ring-transparent transition hover:ring-brand/40">
                 <Avatar user={user} size={32} />
               </summary>
-              <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-md border border-line bg-card py-1 text-sm text-ink shadow-lg">
-                <div className="border-b border-line px-3 py-2">
+              <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-md border-[1.5px] border-line bg-card py-1 text-sm text-ink shadow-lg">
+                <div className="border-b-[1.5px] border-line px-3 py-2">
                   <p className="font-semibold">{user.nickname}</p>
                 </div>
                 <Link href={`/u/${user.username}`} className="block px-3 py-2 hover:bg-soft">
@@ -104,7 +104,7 @@ export default async function Header() {
                     管理后台
                   </Link>
                 )}
-                <form action={logoutAction} className="border-t border-line">
+                <form action={logoutAction} className="border-t-[1.5px] border-line">
                   <button type="submit" className="w-full px-3 py-2 text-left text-red-600 hover:bg-red-500/10 dark:text-red-400">
                     退出登录
                   </button>
@@ -116,7 +116,7 @@ export default async function Header() {
           <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/login"
-              className="rounded-md border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft"
+              className="rounded-md border-[1.5px] border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft"
             >
               登录
             </Link>

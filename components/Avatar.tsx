@@ -26,7 +26,7 @@ export function Avatar({
         loading="lazy"
         style={style}
         onError={() => setBroken(true)}
-        className={`shrink-0 rounded-md border border-line bg-card object-cover ${className}`}
+        className={`shrink-0 rounded-md border-[1.5px] border-line bg-card object-cover ${className}`}
       />
     );
   }
