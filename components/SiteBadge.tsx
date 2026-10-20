@@ -8,7 +8,7 @@ export default async function SiteBadge({ className = "h-7 w-7" }: { className?:
       <img
         src={badge}
         alt="站点徽章"
-        className={`${className} shrink-0 rounded-full border border-white/30 object-cover`}
+        className={`${className} shrink-0 rounded-full border border-line object-cover`}
       />
     );
   }
@@ -19,12 +19,12 @@ function DefaultBadge({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={`${className} shrink-0`} role="img" aria-label="HSFZ BBS">
       <defs>
-        <linearGradient id="badgeGreen" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#0d8459" />
-          <stop offset="1" stopColor="#075e40" />
+        <linearGradient id="badgeBlue" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#0088cc" />
+          <stop offset="1" stopColor="#006699" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#badgeGreen)" />
+      <circle cx="32" cy="32" r="30" fill="url(#badgeBlue)" />
       <circle cx="32" cy="32" r="25.5" fill="none" stroke="#ffffff" strokeWidth="2.4" />
       <text
         x="32"

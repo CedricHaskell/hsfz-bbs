@@ -125,7 +125,7 @@ export default async function UserProfilePage({
                 )}
               </div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-soft">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#0e7490] to-[#148f77]" style={{ width: `${progress}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-[var(--tertiary)] to-[var(--tertiary-hover)]" style={{ width: `${progress}%` }} />
               </div>
             </div>
           </div>

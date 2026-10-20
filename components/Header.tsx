@@ -14,35 +14,35 @@ export default async function Header() {
   const openTickets = user?.role === "admin" ? openTicketCount() : 0;
 
   return (
-    <header className="sticky top-0 z-40 bg-gradient-to-r from-[#1a5276] to-[#148f77] text-white shadow-sm">
+    <header className="sticky top-0 z-40 border-b border-line bg-header shadow-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2 text-[15px] font-semibold">
-          <SiteBadge className="h-8 w-8 drop-shadow-sm" />
+        <Link href="/" className="flex shrink-0 items-center gap-2 text-[15px] font-semibold text-ink">
+          <SiteBadge className="h-8 w-8" />
           <span>HSFZ BBS</span>
-          <span className="hidden text-xs font-normal text-white/70 lg:inline">
+          <span className="hidden text-xs font-normal text-muted lg:inline">
             华南师大附中校园论坛
           </span>
         </Link>
 
         <nav className="hidden items-center gap-0.5 text-sm md:flex">
-          <Link href="/" className="rounded-md px-2.5 py-1.5 hover:bg-white/15">
+          <Link href="/" className="rounded-md px-2.5 py-1.5 text-ink hover:bg-soft">
             首页
           </Link>
           {user && (
-            <Link href="/messages" className="relative rounded-md px-2.5 py-1.5 hover:bg-white/15">
+            <Link href="/messages" className="relative rounded-md px-2.5 py-1.5 text-ink hover:bg-soft">
               我的消息
               {unread > 0 && (
-                <span className="absolute -right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold">
+                <span className="absolute -right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
                   {unread > 9 ? "9+" : unread}
                 </span>
               )}
             </Link>
           )}
           {user?.role === "admin" && (
-            <Link href="/admin" className="relative rounded-md px-2.5 py-1.5 hover:bg-white/15">
+            <Link href="/admin" className="relative rounded-md px-2.5 py-1.5 text-ink hover:bg-soft">
               管理后台
               {openTickets > 0 && (
-                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold">
+                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
                   {openTickets}
                 </span>
               )}
@@ -55,12 +55,12 @@ export default async function Header() {
             <input
               name="q"
               placeholder="搜索帖子…"
-              className="h-8 w-40 rounded-md border border-white/20 bg-white/15 pl-3 pr-8 text-sm text-white outline-none transition-all placeholder:text-white/60 focus:w-52 focus:bg-white/25"
+              className="h-8 w-40 rounded-md border border-line bg-input pl-3 pr-8 text-sm text-ink outline-none transition-all placeholder:text-muted/60 focus:w-52"
             />
             <button
               type="submit"
               aria-label="搜索"
-              className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20 hover:text-white"
+              className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted hover:bg-soft hover:text-ink"
             >
               <IconSearch className="h-3.5 w-3.5" />
             </button>
@@ -73,12 +73,12 @@ export default async function Header() {
           <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/new"
-              className="hidden rounded-md bg-[#1a7f37] px-3 py-1.5 text-sm font-medium hover:bg-[#1f8f3f] sm:block"
+              className="hidden rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark sm:block"
             >
               ✏️ 发帖
             </Link>
             <details className="relative">
-              <summary className="flex cursor-pointer list-none rounded-full ring-2 ring-transparent transition hover:ring-white/40">
+              <summary className="flex cursor-pointer list-none rounded-full ring-2 ring-transparent transition hover:ring-brand/40">
                 <Avatar user={user} size={32} />
               </summary>
               <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-md border border-line bg-card py-1 text-sm text-ink shadow-lg">
@@ -116,11 +116,11 @@ export default async function Header() {
           <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/login"
-              className="rounded-md border border-white/40 px-3 py-1.5 text-sm font-medium hover:bg-white/15"
+              className="rounded-md border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft"
             >
               登录
             </Link>
-            <Link href="/register" className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-brand-dark hover:bg-white/90">
+            <Link href="/register" className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark">
               注册
             </Link>
           </div>

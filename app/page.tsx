@@ -143,7 +143,7 @@ export default async function HomePage({
             <ol className="divide-y divide-line">
               {hot.map((t, i) => (
                 <li key={t.id} className="flex gap-2 px-3 py-2.5 text-sm">
-                  <span className={`w-4 shrink-0 text-center font-semibold ${i < 3 ? "text-[#d1242f]" : "text-muted"}`}>
+                  <span className={`w-4 shrink-0 text-center font-semibold ${i < 3 ? "text-[var(--danger)]" : "text-muted"}`}>
                     {i + 1}
                   </span>
                   <Link href={`/t/${t.id}`} className="line-clamp-2 flex-1 hover:text-brand hover:underline">
