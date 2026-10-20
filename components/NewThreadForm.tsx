@@ -5,6 +5,7 @@ import { createThreadAction } from "@/app/actions/forum";
 import type { ActionState } from "@/app/actions/auth";
 import type { BoardRow } from "@/lib/queries";
 import { EmojiPicker } from "./EmojiPicker";
+import { MarkdownPreview } from "./MarkdownPreview";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 
@@ -31,6 +32,8 @@ export function NewThreadForm({
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createThreadAction, null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const [content, setContent] = useState("");
+  const [preview, setPreview] = useState(false);
   const visible = isAdmin ? boards : boards.filter((b) => b.slug !== "announcements");
 
   // 两级选择：先大类，再板块
@@ -108,20 +111,40 @@ export function NewThreadForm({
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">正文</label>
-        <div className="relative">
-          <textarea
-            ref={contentRef}
-            name="content"
-            required
-            minLength={2}
-            rows={8}
-            className="input resize-y pr-10"
-            placeholder="支持 Markdown · @用户名 · $LaTeX$ 公式"
-          />
-          <div className="absolute right-2 top-2">
-            <EmojiPicker targetRef={contentRef} />
+        <div className="mb-1 flex items-center justify-between">
+          <label className="block text-sm font-medium">正文</label>
+          <button
+            type="button"
+            onClick={() => setPreview(!preview)}
+            className={`rounded-full px-2.5 py-1 text-xs ${
+              preview ? "bg-brand text-white" : "text-muted hover:bg-soft"
+            }`}
+          >
+            {preview ? "✏️ 继续编辑" : "👁 实时预览"}
+          </button>
+        </div>
+        <div className={`grid gap-3 ${preview ? "md:grid-cols-2" : ""}`}>
+          <div className="relative">
+            <textarea
+              ref={contentRef}
+              name="content"
+              required
+              minLength={2}
+              rows={10}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="input resize-y pr-10"
+              placeholder="支持 Markdown · @用户名 · $LaTeX$ 公式"
+            />
+            <div className="absolute right-2 top-2">
+              <EmojiPicker targetRef={contentRef} />
+            </div>
           </div>
+          {preview && (
+            <div className="input min-h-48 overflow-auto bg-soft/40">
+              <MarkdownPreview content={content} className="text-sm" />
+            </div>
+          )}
         </div>
         <p className="mt-1.5 text-xs text-muted">
           支持 Markdown 语法、@用户名 提及、$LaTeX$ 公式（$x^2$）、表情。请友善发言（遵守社区公约）。

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { allBoards, latestThreads, hotThreads, siteStats } from "@/lib/queries";
+import { allBoards, latestThreads, hotThreads, siteStats, threadsSorted, announcementThreads } from "@/lib/queries";
 import { ThreadList } from "@/components/ThreadList";
 import { fmtNum } from "@/lib/format";
 
@@ -16,14 +16,28 @@ const CAT_EMOJI: Record<string, string> = {
   官方: "📢",
 };
 
-export default async function HomePage() {
+const SORTS = [
+  { key: "latest", label: "最新" },
+  { key: "reply", label: "最多回复" },
+  { key: "likes", label: "最多点赞" },
+  { key: "views", label: "最多浏览" },
+];
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string }>;
+}) {
+  const { sort: sortParam } = await searchParams;
+  const sort = SORTS.some((s) => s.key === sortParam) ? (sortParam as string) : "latest";
   const user = await getCurrentUser();
   const boards = allBoards();
   const grouped = CAT_ORDER.map((cat) => ({ cat, items: boards.filter((b) => b.category === cat) })).filter(
     (g) => g.items.length
   );
-  const threads = latestThreads(25);
+  const threads = threadsSorted(sort, 25);
   const hot = hotThreads(5);
+  const announcements = user ? [] : announcementThreads(5);
   const stats = siteStats();
 
   return (
@@ -74,10 +88,56 @@ export default async function HomePage() {
               </Link>
             )}
           </div>
-          <ThreadList threads={threads} />
+          {user ? (
+            <>
+              <div className="flex gap-2 border-b border-line px-4 py-2 text-xs">
+                {SORTS.map((s) => (
+                  <Link
+                    key={s.key}
+                    href={`/?sort=${s.key}`}
+                    className={`rounded-full px-2.5 py-1 ${
+                      sort === s.key ? "bg-brand text-white" : "text-muted hover:bg-soft"
+                    }`}
+                  >
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
+              <ThreadList threads={threads} />
+            </>
+          ) : (
+            <div className="px-4 py-10 text-center">
+              <p className="text-sm text-muted">
+                🔒 论坛内容仅对注册同学开放。登录后可浏览全部帖子与回复。
+              </p>
+              <div className="mt-4 flex justify-center gap-3">
+                <Link href="/login" className="btn-primary !px-4 !py-1.5 text-sm">
+                  登录
+                </Link>
+                <Link href="/register" className="btn !px-4 !py-1.5 text-sm">
+                  注册
+                </Link>
+              </div>
+              {announcements.length > 0 && (
+                <div className="mt-6 text-left">
+                  <p className="mb-2 px-4 text-xs font-semibold text-muted">📢 站务公告（游客可见）</p>
+                  <ul className="divide-y divide-line">
+                    {announcements.map((t) => (
+                      <li key={t.id}>
+                        <Link href={`/t/${t.id}`} className="block px-4 py-2.5 text-sm hover:bg-soft/60">
+                          📢 {t.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         <aside className="space-y-4">
+          {user && (
           <div className="card">
             <div className="card-header">⚡ 热门话题</div>
             <ol className="divide-y divide-line">
@@ -93,6 +153,7 @@ export default async function HomePage() {
               ))}
             </ol>
           </div>
+          )}
 
           <div className="card">
             <div className="card-header">📊 站点统计</div>

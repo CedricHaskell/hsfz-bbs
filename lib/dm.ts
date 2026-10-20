@@ -73,3 +73,26 @@ export function sendDm(fromId: number, toId: number, content: string) {
     "INSERT INTO direct_messages (sender_id, recipient_id, content, created_at) VALUES (?, ?, ?, ?)"
   ).run(fromId, toId, content, nowStr());
 }
+
+/** 两者间是否存在拉黑关系（任一方拉黑即生效） */
+export function isBlocked(a: number, b: number): boolean {
+  return !!db
+    .prepare(
+      "SELECT 1 AS x FROM blocks WHERE (user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)"
+    )
+    .get(a, b, b, a);
+}
+
+export function toggleBlock(userId: number, targetId: number): "blocked" | "unblocked" {
+  const existing = db
+    .prepare("SELECT id FROM blocks WHERE user_id = ? AND blocked_id = ?")
+    .get(userId, targetId) as { id: number } | undefined;
+  if (existing) {
+    db.prepare("DELETE FROM blocks WHERE id = ?").run(existing.id);
+    return "unblocked";
+  }
+  db.prepare(
+    "INSERT INTO blocks (user_id, blocked_id, created_at) VALUES (?, ?, datetime('now','localtime'))"
+  ).run(userId, targetId);
+  return "blocked";
+}

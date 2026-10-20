@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser, requireUser } from "@/lib/auth";
-import { conversationMessages, markConversationRead } from "@/lib/dm";
+import { conversationMessages, markConversationRead, isBlocked } from "@/lib/dm";
+import { toggleBlockAction } from "@/app/actions/dm";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Avatar } from "@/components/Avatar";
 import { SendDmForm } from "@/components/DmForms";
 import { timeAgo } from "@/lib/format";
@@ -24,6 +26,7 @@ export default async function DmConversationPage({
 
   const messages = conversationMessages(me.id, other.id);
   markConversationRead(me.id, other.id);
+  const blocked = isBlocked(me.id, other.id);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -35,6 +38,12 @@ export default async function DmConversationPage({
           </Link>
           <p className="text-xs text-muted">@{other.username}</p>
         </div>
+        <form action={toggleBlockAction} className="shrink-0">
+          <input type="hidden" name="to_id" value={other.id} />
+          <SubmitButton className={blocked ? "btn-xs" : "btn-xs !text-red-600 dark:!text-red-400"}>
+            {blocked ? "已拉黑（点击取消）" : "拉黑"}
+          </SubmitButton>
+        </form>
         <Link href="/dm" className="btn shrink-0">
           ← 全部私信
         </Link>

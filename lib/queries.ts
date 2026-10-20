@@ -179,3 +179,24 @@ export function followStats(userId: number, viewerId?: number) {
 export function openTicketCount(): number {
   return (db.prepare("SELECT COUNT(*) AS c FROM tickets WHERE status = 'open'").get() as { c: number }).c;
 }
+
+/** 首页排序：latest 最新 / reply 最多回复 / likes 最多点赞 / views 最多浏览 */
+export function threadsSorted(sort: string, limit = 25): ThreadRow[] {
+  const order =
+    sort === "likes"
+      ? "(SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = t.id) DESC"
+      : sort === "views"
+        ? "t.views DESC"
+        : sort === "reply"
+          ? "t.reply_count DESC"
+          : "t.is_pinned DESC, COALESCE(NULLIF(t.last_reply_at,''), t.created_at) DESC";
+  return rows(`${THREAD_SELECT} ORDER BY ${order} LIMIT ?`, limit);
+}
+
+/** 站务公告板块的帖子（游客可见） */
+export function announcementThreads(limit = 5): ThreadRow[] {
+  return rows(
+    `${THREAD_SELECT} WHERE b.slug = 'announcements' ORDER BY t.created_at DESC LIMIT ?`,
+    limit
+  );
+}

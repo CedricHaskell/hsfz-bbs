@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { createReplyAction } from "@/app/actions/forum";
 import type { ActionState } from "@/app/actions/auth";
 import { EmojiPicker } from "./EmojiPicker";
+import { MarkdownPreview } from "./MarkdownPreview";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 
@@ -19,6 +20,8 @@ export function ReplyForm({
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createReplyAction, null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const [content, setContent] = useState("");
+  const [preview, setPreview] = useState(false);
   return (
     <form action={formAction} id="reply-form" className="card mt-4 scroll-mt-24 p-4">
       <input type="hidden" name="thread_id" value={threadId} />
@@ -49,15 +52,35 @@ export function ReplyForm({
           {state.message}
         </div>
       )}
-      <textarea
-        ref={contentRef}
-        name="content"
-        required
-        rows={4}
-        className="input resize-y"
-        placeholder="友善回复，理性讨论…"
-      />
-      <p className="mt-1.5 text-xs text-muted">支持 Markdown · @用户名 · $LaTeX$ 公式 · 表情</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <textarea
+          ref={contentRef}
+          name="content"
+          required
+          rows={4}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          className="input resize-y"
+          placeholder="友善回复，理性讨论…"
+        />
+        {preview && (
+          <div className="input min-h-24 overflow-auto bg-soft/40">
+            <MarkdownPreview content={content} className="text-sm" />
+          </div>
+        )}
+      </div>
+      <p className="mt-1.5 flex items-center justify-between text-xs text-muted">
+        <span>支持 Markdown · @用户名 · $LaTeX$ 公式 · 表情</span>
+        <button
+          type="button"
+          onClick={() => setPreview(!preview)}
+          className={`rounded-full px-2.5 py-1 ${
+            preview ? "bg-brand text-white" : "hover:bg-soft"
+          }`}
+        >
+          {preview ? "✏️ 继续编辑" : "👁 实时预览"}
+        </button>
+      </p>
       <div className="mt-3">
         <ImagePicker max={2} />
         <p className="mt-1.5 text-xs text-muted">可附 2 张图片，上传前自动压缩。</p>

@@ -131,6 +131,13 @@ CREATE TABLE IF NOT EXISTS follows (
   created_at TEXT DEFAULT '',
   UNIQUE(follower_id, following_id)
 );
+CREATE TABLE IF NOT EXISTS blocks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  blocked_id INTEGER NOT NULL,
+  created_at TEXT DEFAULT '',
+  UNIQUE(user_id, blocked_id)
+);
 CREATE TABLE IF NOT EXISTS whitelist (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   real_name TEXT NOT NULL,
