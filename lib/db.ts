@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fmtDate } from "./format";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.HSFZ_DATA_DIR || path.join(process.cwd(), "data");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
