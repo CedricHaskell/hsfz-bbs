@@ -52,7 +52,7 @@ export default async function SettingsPage() {
         </div>
         <div className="card">
           <div className="card-header">👤 基本资料</div>
-          <ProfileForm nickname={user.nickname} bio={user.bio} grade={user.grade} />
+          <ProfileForm nickname={user.nickname} bio={user.bio} grade={user.grade} phone={user.phone} />
         </div>
         <div className="card md:col-span-2">
           <div className="card-header">🔒 修改密码</div>
