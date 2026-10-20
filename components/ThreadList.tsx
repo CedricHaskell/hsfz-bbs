@@ -52,7 +52,7 @@ export function ThreadRowItem({
         )}
         <Link
           href={`/t/${t.id}`}
-          className="truncate font-medium text-ink hover:text-brand hover:underline"
+          className="min-w-0 truncate font-medium text-ink hover:text-brand hover:underline"
         >
           {t.title}
         </Link>

@@ -61,7 +61,7 @@ export default async function HomePage({
                       className="group flex items-center justify-between gap-1 text-sm"
                       title={b.description}
                     >
-                      <span className="truncate group-hover:text-brand group-hover:underline">
+                      <span className="min-w-0 truncate group-hover:text-brand group-hover:underline">
                         {b.icon} {b.name}
                       </span>
                       <span className="shrink-0 text-xs text-muted">{b.thread_count}</span>
@@ -75,7 +75,7 @@ export default async function HomePage({
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <section className="card">
+        <section className="card min-w-0">
           <div className="card-header flex items-center justify-between">
             <span>🔥 最新动态</span>
             {user ? (
@@ -90,7 +90,7 @@ export default async function HomePage({
           </div>
           {user ? (
             <>
-              <div className="flex gap-2 border-b border-line px-4 py-2 text-xs">
+              <div className="flex flex-wrap gap-2 border-b border-line px-4 py-2 text-xs">
                 {SORTS.map((s) => (
                   <Link
                     key={s.key}
