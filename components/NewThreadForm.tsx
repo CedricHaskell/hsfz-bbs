@@ -5,6 +5,7 @@ import { createThreadAction } from "@/app/actions/forum";
 import type { ActionState } from "@/app/actions/auth";
 import type { BoardRow } from "@/lib/queries";
 import { EmojiPicker } from "./EmojiPicker";
+import { formatEditorSelection, type EditorCommand } from "@/lib/editor";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
@@ -34,6 +35,34 @@ export function NewThreadForm({
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState("");
   const [preview, setPreview] = useState(false);
+
+  const TOOLBAR: Array<{ cmd: EditorCommand; label: string; title: string }> = [
+    { cmd: "bold", label: "B", title: "加粗" },
+    { cmd: "italic", label: "I", title: "斜体" },
+    { cmd: "heading", label: "H", title: "标题" },
+    { cmd: "quote", label: "❝", title: "引用" },
+    { cmd: "list", label: "• 列表", title: "无序列表" },
+    { cmd: "ordered", label: "1. 列表", title: "有序列表" },
+    { cmd: "link", label: "🔗 链接", title: "插入链接" },
+    { cmd: "code", label: "‹›", title: "行内代码" },
+    { cmd: "math", label: "$", title: "行内公式" },
+    { cmd: "display-math", label: "$$", title: "公式块" },
+  ];
+
+  function applyFormat(cmd: EditorCommand) {
+    const el = contentRef.current;
+    if (!el) return;
+    const next = formatEditorSelection(
+      { value: el.value, start: el.selectionStart ?? 0, end: el.selectionEnd ?? 0 },
+      cmd
+    );
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    setter.call(el, next.value);
+    el.selectionStart = next.start;
+    el.selectionEnd = next.end;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.focus();
+  }
   const visible = isAdmin ? boards : boards.filter((b) => b.slug !== "announcements");
 
   // 两级选择：先大类，再板块
@@ -124,6 +153,20 @@ export function NewThreadForm({
           </button>
         </div>
         <div className={`grid gap-3 ${preview ? "md:grid-cols-2" : ""}`}>
+          <div>
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
+            {TOOLBAR.map((t) => (
+              <button
+                key={t.cmd}
+                type="button"
+                title={t.title}
+                onClick={() => applyFormat(t.cmd)}
+                className="rounded border border-line px-2 py-0.5 text-xs font-semibold text-muted hover:bg-soft hover:text-ink"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
           <div className="relative">
             <textarea
               ref={contentRef}
@@ -139,6 +182,7 @@ export function NewThreadForm({
             <div className="absolute right-2 top-2">
               <EmojiPicker targetRef={contentRef} />
             </div>
+          </div>
           </div>
           {preview && (
             <div className="input min-h-48 overflow-auto bg-soft/40">
