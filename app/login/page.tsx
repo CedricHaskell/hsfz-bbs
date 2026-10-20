@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { LoginForm } from "@/components/AuthForms";
 import SiteBadge from "@/components/SiteBadge";
+import { GuestRequestForm } from "@/components/GuestRequestForm";
 
 export const metadata = { title: "登录" };
 
@@ -39,6 +40,14 @@ export default async function LoginPage({
       <div className="card p-5">
         <LoginForm />
       </div>
+      <details className="card mt-4 p-4">
+        <summary className="cursor-pointer select-none text-sm font-medium text-muted">
+          无法登录 / 忘记密码？点这里向管理员求助（无需登录）
+        </summary>
+        <div className="mt-3">
+          <GuestRequestForm />
+        </div>
+      </details>
     </div>
   );
 }
