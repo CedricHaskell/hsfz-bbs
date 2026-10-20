@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db, GRADES, UPLOAD_DIR } from "@/lib/db";
-import { getCurrentUser, requireUser } from "@/lib/auth";
+import { getCurrentUser, requireUser, destroyUserSessions } from "@/lib/auth";
 import { nowStr } from "@/lib/format";
 import type { ActionState } from "./auth";
 
@@ -80,7 +80,9 @@ export async function changePasswordAction(
     bcrypt.hashSync(newPassword, 10),
     user.id
   );
-  return okMsg("密码已修改，下次登录请使用新密码");
+  // 改密后销毁该账号全部会话，所有设备强制重新登录
+  destroyUserSessions(user.id);
+  redirect("/login?pwd=1");
 }
 
 export async function removeAvatarAction(): Promise<void> {
