@@ -161,6 +161,21 @@ export function unreadNotificationCount(userId: number): number {
     .get(userId) as { c: number }).c;
 }
 
+export function followStats(userId: number, viewerId?: number) {
+  const followers = (db
+    .prepare("SELECT COUNT(*) AS c FROM follows WHERE following_id = ?")
+    .get(userId) as { c: number }).c;
+  const following = (db
+    .prepare("SELECT COUNT(*) AS c FROM follows WHERE follower_id = ?")
+    .get(userId) as { c: number }).c;
+  const isFollowing = viewerId
+    ? !!db
+        .prepare("SELECT 1 AS x FROM follows WHERE follower_id = ? AND following_id = ?")
+        .get(viewerId, userId)
+    : false;
+  return { followers, following, isFollowing };
+}
+
 export function openTicketCount(): number {
   return (db.prepare("SELECT COUNT(*) AS c FROM tickets WHERE status = 'open'").get() as { c: number }).c;
 }

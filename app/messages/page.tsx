@@ -23,7 +23,7 @@ export default async function MessagesPage() {
 
   const notifications = recentNotifications(user.id);
   markNotificationsRead(user.id);
-  const typeIcon: Record<string, string> = { reply: "💬", quote: "❝", mention: "📢", like: "❤️" };
+  const typeIcon: Record<string, string> = { reply: "💬", quote: "❝", mention: "📢", like: "❤️", follow: "👤" };
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">

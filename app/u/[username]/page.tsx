@@ -9,7 +9,10 @@ import {
 } from "@/lib/queries";
 import { userPostCount } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { followStats } from "@/lib/queries";
+import { toggleFollowAction } from "@/app/actions/follow";
 import { Avatar } from "@/components/Avatar";
+import { SubmitButton } from "@/components/SubmitButton";
 import { TitleBadge } from "@/components/TitleBadge";
 import { ThreadList } from "@/components/ThreadList";
 import { timeAgo } from "@/lib/format";
@@ -34,6 +37,7 @@ export default async function UserProfilePage({
   if (!profile) notFound();
 
   const me = await getCurrentUser();
+  const fstats = followStats(profile.id, me?.id);
   const isSelf = me?.id === profile.id;
   const postCount = userPostCount(profile.id);
   const level = getLevel(postCount);
@@ -65,10 +69,18 @@ export default async function UserProfilePage({
         <div className="flex flex-wrap items-start gap-4">
           <Avatar user={profile} size={72} />
           {me && me.id !== profile.id && (
-            <div className="ml-auto shrink-0">
+            <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
               <Link href={`/dm/${profile.username}`} className="btn">
                 💬 发私信
               </Link>
+              <form action={toggleFollowAction}>
+                <input type="hidden" name="user_id" value={profile.id} />
+                <SubmitButton
+                  className={fstats.isFollowing ? "btn w-full justify-center" : "btn-primary w-full justify-center"}
+                >
+                  {fstats.isFollowing ? "已关注" : "＋ 关注"}
+                </SubmitButton>
+              </form>
             </div>
           )}
           <div className="min-w-0 flex-1">
@@ -91,6 +103,12 @@ export default async function UserProfilePage({
               </span>
               <span className="text-muted">
                 获赞 <b className="text-ink">{likes}</b>
+              </span>
+              <span className="text-muted">
+                关注 <b className="text-ink">{fstats.following}</b>
+              </span>
+              <span className="text-muted">
+                粉丝 <b className="text-ink">{fstats.followers}</b>
               </span>
               <span className="text-muted">加入于 {profile.created_at.slice(0, 10)}</span>
             </div>
