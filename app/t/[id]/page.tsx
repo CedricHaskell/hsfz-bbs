@@ -247,7 +247,7 @@ export default async function ThreadPage({
         ) : (
           <ol className="divide-y divide-line">
             {replies.map((r, i) => (
-              <li key={r.id} className="flex gap-3 px-4 py-3">
+              <li key={r.id} id={`reply-${r.id}`} className="flex scroll-mt-24 gap-3 px-4 py-3">
                 <Link href={`/u/${r.username}`} className="shrink-0">
                   <Avatar user={r} size={32} />
                 </Link>

@@ -154,6 +154,13 @@ export function unreadTicketCount(userId: number): number {
     .get(userId) as { c: number }).c;
 }
 
+/** 我的消息红圈 = 未读工单回复 + 未读站内通知 */
+export function unreadNotificationCount(userId: number): number {
+  return (db
+    .prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0")
+    .get(userId) as { c: number }).c;
+}
+
 export function openTicketCount(): number {
   return (db.prepare("SELECT COUNT(*) AS c FROM tickets WHERE status = 'open'").get() as { c: number }).c;
 }

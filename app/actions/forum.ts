@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { nowStr } from "@/lib/format";
 import { saveUploadImage, removeUploadFile } from "@/lib/upload";
+import { notify, mentionUserIds } from "@/lib/notify";
 import type { ActionState } from "./auth";
 
 const fail = (message: string): ActionState => ({ message, ok: false });
@@ -65,8 +66,15 @@ export async function createThreadAction(
       nowStr(),
       nowStr()
     );
+  const newThreadId = Number(info.lastInsertRowid);
+  // 匿名帖不发送 @提及通知，避免暴露作者
+  if (!anonymous) {
+    mentionUserIds(content, user.id).forEach((uid) =>
+      notify(uid, "mention", user.id, newThreadId, 0, `在《${title}》中提到了你`)
+    );
+  }
   revalidatePath("/", "layout");
-  redirect(`/t/${info.lastInsertRowid}`);
+  redirect(`/t/${newThreadId}`);
 }
 
 export async function createReplyAction(
@@ -81,10 +89,12 @@ export async function createReplyAction(
   if (!content) return fail("回复内容不能为空");
   const thread = db
     .prepare(
-      `SELECT th.id, b.grade_lock, b.name AS board_name
+      `SELECT th.id, th.author_id, th.title, b.grade_lock, b.name AS board_name
        FROM threads th JOIN boards b ON b.id = th.board_id WHERE th.id = ?`
     )
-    .get(threadId) as { id: number; grade_lock: string; board_name: string } | undefined;
+    .get(threadId) as
+    | { id: number; author_id: number; title: string; grade_lock: string; board_name: string }
+    | undefined;
   if (!thread) return fail("帖子不存在或已删除");
   if (thread.grade_lock && user.role !== "admin" && user.grade !== thread.grade_lock)
     return fail(
@@ -109,16 +119,33 @@ export async function createReplyAction(
     return fail(e instanceof Error ? e.message : "图片保存失败，请重试");
   }
 
-  db.prepare(
-    "INSERT INTO replies (thread_id, author_id, content, images, reply_to, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run(
-    threadId,
-    user.id,
-    content,
-    imagePaths.length ? JSON.stringify(imagePaths) : "",
-    replyTo,
-    nowStr()
+  const info = db
+    .prepare(
+      "INSERT INTO replies (thread_id, author_id, content, images, reply_to, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+    .run(
+      threadId,
+      user.id,
+      content,
+      imagePaths.length ? JSON.stringify(imagePaths) : "",
+      replyTo,
+      nowStr()
+    );
+  const lastReplyId = Number(info.lastInsertRowid);
+
+  // 站内通知：回复帖主 / 引用楼层 / @提及
+  notify(thread.author_id, "reply", user.id, threadId, lastReplyId, `回复了你的帖子《${thread.title}》`);
+  if (replyTo) {
+    const quoted = db
+      .prepare("SELECT author_id FROM replies WHERE id = ? AND thread_id = ?")
+      .get(replyTo, threadId) as { author_id: number } | undefined;
+    if (quoted)
+      notify(quoted.author_id, "quote", user.id, threadId, replyTo, `在《${thread.title}》中引用了你`);
+  }
+  mentionUserIds(content, user.id).forEach((uid) =>
+    notify(uid, "mention", user.id, threadId, lastReplyId, `在《${thread.title}》中提到了你`)
   );
+
   db.prepare("UPDATE threads SET reply_count = reply_count + 1, last_reply_at = ? WHERE id = ?").run(
     nowStr(),
     threadId
@@ -176,8 +203,15 @@ export async function toggleLikeAction(formData: FormData): Promise<void> {
   const liked = db
     .prepare("SELECT 1 AS x FROM thread_likes WHERE user_id = ? AND thread_id = ?")
     .get(user.id, threadId);
-  if (liked) db.prepare("DELETE FROM thread_likes WHERE user_id = ? AND thread_id = ?").run(user.id, threadId);
-  else db.prepare("INSERT INTO thread_likes (user_id, thread_id) VALUES (?, ?)").run(user.id, threadId);
+  if (liked)
+    db.prepare("DELETE FROM thread_likes WHERE user_id = ? AND thread_id = ?").run(user.id, threadId);
+  else {
+    db.prepare("INSERT INTO thread_likes (user_id, thread_id) VALUES (?, ?)").run(user.id, threadId);
+    const t = db.prepare("SELECT author_id, title FROM threads WHERE id = ?").get(threadId) as
+      | { author_id: number; title: string }
+      | undefined;
+    if (t) notify(t.author_id, "like", user.id, threadId, 0, `赞了你的帖子《${t.title}》`);
+  }
   revalidatePath(`/t/${threadId}`);
   revalidatePath("/");
 }
