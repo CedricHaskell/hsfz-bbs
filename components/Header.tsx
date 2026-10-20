@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { unreadTicketCount, openTicketCount, unreadNotificationCount } from "@/lib/queries";
+import { unreadDmCount } from "@/lib/dm";
 import { Avatar } from "./Avatar";
 import SiteBadge from "./SiteBadge";
 import ThemeToggle from "./ThemeToggle";
@@ -9,7 +10,7 @@ import { logoutAction } from "@/app/actions/auth";
 
 export default async function Header() {
   const user = await getCurrentUser();
-  const unread = user ? unreadTicketCount(user.id) + unreadNotificationCount(user.id) : 0;
+  const unread = user ? unreadTicketCount(user.id) + unreadNotificationCount(user.id) + unreadDmCount(user.id) : 0;
   const openTickets = user?.role === "admin" ? openTicketCount() : 0;
 
   return (

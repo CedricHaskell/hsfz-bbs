@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { recentNotifications, markNotificationsRead } from "@/lib/notify";
+import { unreadDmCount } from "@/lib/dm";
 import { requireUser } from "@/lib/auth";
 import { NewTicketForm } from "@/components/TicketForms";
 import { timeAgo, ticketCategoryName, TICKET_STATUS } from "@/lib/format";
@@ -57,6 +58,18 @@ export default async function MessagesPage() {
           </ul>
         </div>
       )}
+
+      <div className="card">
+        <div className="card-header flex items-center justify-between">
+          <span>📨 私信</span>
+          <Link href="/dm" className="text-xs text-brand hover:underline">
+            查看全部 →
+          </Link>
+        </div>
+        <p className="px-4 py-3 text-sm text-muted">
+          未读私信 <b className="text-ink">{unreadDmCount(user.id)}</b> 条。与同学一对一交流请进入私信页。
+        </p>
+      </div>
 
       <details className="card" open={tickets.length === 0}>
         <summary className="card-header cursor-pointer select-none">✉️ 发起新工单</summary>

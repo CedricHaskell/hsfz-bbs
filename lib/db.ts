@@ -116,6 +116,14 @@ CREATE TABLE IF NOT EXISTS notifications (
   is_read INTEGER DEFAULT 0,
   created_at TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS direct_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sender_id INTEGER NOT NULL,
+  recipient_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  is_read INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS whitelist (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   real_name TEXT NOT NULL,

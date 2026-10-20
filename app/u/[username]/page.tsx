@@ -64,6 +64,13 @@ export default async function UserProfilePage({
       <div className="card p-5">
         <div className="flex flex-wrap items-start gap-4">
           <Avatar user={profile} size={72} />
+          {me && me.id !== profile.id && (
+            <div className="ml-auto shrink-0">
+              <Link href={`/dm/${profile.username}`} className="btn">
+                💬 发私信
+              </Link>
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-semibold">{profile.nickname}</h1>
