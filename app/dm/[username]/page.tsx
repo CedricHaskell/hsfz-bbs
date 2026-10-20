@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getCurrentUser, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { conversationMessages, markConversationRead, isBlocked } from "@/lib/dm";
 import { toggleBlockAction } from "@/app/actions/dm";
 import { SubmitButton } from "@/components/SubmitButton";

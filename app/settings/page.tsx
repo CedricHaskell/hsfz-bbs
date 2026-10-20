@@ -7,6 +7,7 @@ import { ProfileForm, AvatarUploadForm, PasswordForm } from "@/components/Profil
 import { ConfirmSubmit } from "@/components/SubmitButton";
 import { removeAvatarAction } from "@/app/actions/profile";
 import { userPostCount } from "@/lib/db";
+import { maskPhone } from "@/lib/crypto";
 
 export const metadata = { title: "账号设置" };
 
@@ -14,7 +15,7 @@ export default async function SettingsPage() {
   const sessionUser = await requireUser();
   const user = db
     .prepare(
-      `SELECT id, username, nickname, avatar, custom_title, role, status, banned, grade, phone, email, bio, created_at
+      `SELECT id, username, nickname, avatar, custom_title, role, status, banned, grade, email, bio, phone, created_at
        FROM users WHERE id = ?`
     )
     .get(sessionUser.id) as import("@/lib/db").UserRow;
@@ -26,7 +27,7 @@ export default async function SettingsPage() {
 
       <div className="card p-4">
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar user={user} size={64} />
+          <Avatar user={{ nickname: user.nickname, username: user.username, avatar: user.avatar }} size={64} />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{user.nickname}</p>
             <p className="text-sm text-muted">@{user.username}</p>
@@ -36,11 +37,14 @@ export default async function SettingsPage() {
             </div>
           </div>
           {user.avatar && (
-            <form action={removeAvatarAction}>
-              <ConfirmSubmit className="btn-danger" message="确定移除当前头像，恢复为默认字母头像？">
-                移除头像
-              </ConfirmSubmit>
-            </form>
+            <div className="flex items-center gap-3">
+              <a href={`${user.avatar}?download=1`} download className="text-sm text-brand hover:underline">下载头像</a>
+              <form action={removeAvatarAction}>
+                <ConfirmSubmit className="btn-danger" message="确定移除当前头像，恢复为默认字母头像？">
+                  移除头像
+                </ConfirmSubmit>
+              </form>
+            </div>
           )}
         </div>
       </div>
@@ -52,7 +56,7 @@ export default async function SettingsPage() {
         </div>
         <div className="card">
           <div className="card-header">👤 基本资料</div>
-          <ProfileForm nickname={user.nickname} bio={user.bio} grade={user.grade} phone={user.phone} />
+          <ProfileForm nickname={user.nickname} bio={user.bio} grade={user.grade} phoneMask={maskPhone(user.phone)} />
         </div>
         <div className="card md:col-span-2">
           <div className="card-header">🔒 修改密码</div>

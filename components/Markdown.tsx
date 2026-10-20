@@ -1,9 +1,6 @@
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import remarkBreaks from "remark-breaks";
-import rehypeKatex from "rehype-katex";
 import { db } from "@/lib/db";
+import { markdownMentionNames } from "@/lib/markdown-mentions";
+import { RichText } from "./RichText";
 
 /**
  * 渲染帖文/回复正文：Markdown（GFM）+ LaTeX 公式（$…$ / $$…$$）+ 换行即换行 + @提及。
@@ -11,22 +8,9 @@ import { db } from "@/lib/db";
  * 原始 HTML 默认被转义，天然防 XSS。
  */
 export function Markdown({ content, className = "" }: { content: string; className?: string }) {
-  const withMentions = content.replace(
-    /(^|[^a-zA-Z0-9_@])@([a-z0-9_]{3,20})/g,
-    (match, pre: string, username: string) =>
-      db.prepare("SELECT 1 FROM users WHERE username = ?").get(username)
-        ? `${pre}[@${username}](/u/${username})`
-        : match
-  );
-
-  return (
-    <div className={`markdown-body ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
-        rehypePlugins={[rehypeKatex]}
-      >
-        {withMentions}
-      </ReactMarkdown>
-    </div>
-  );
+  const candidates = markdownMentionNames(content, 100);
+  const users = candidates.length ? db.prepare(
+    `SELECT username FROM users WHERE username IN (${candidates.map(() => "?").join(",")})`
+  ).all(...candidates) as { username: string }[] : [];
+  return <RichText content={content} className={className} usernames={users.map((user) => user.username)} />;
 }

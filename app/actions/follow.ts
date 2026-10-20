@@ -13,17 +13,19 @@ export async function toggleFollowAction(formData: FormData): Promise<void> {
   if (!targetId || targetId === user.id) return;
   if (!db.prepare("SELECT 1 AS x FROM users WHERE id = ?").get(targetId)) return;
 
-  const existing = db
-    .prepare("SELECT id FROM follows WHERE follower_id = ? AND following_id = ?")
-    .get(user.id, targetId) as { id: number } | undefined;
+  db.transaction(() => {
+    const existing = db
+      .prepare("SELECT id FROM follows WHERE follower_id = ? AND following_id = ?")
+      .get(user.id, targetId) as { id: number } | undefined;
 
-  if (existing) {
-    db.prepare("DELETE FROM follows WHERE id = ?").run(existing.id);
-  } else {
-    db.prepare(
-      "INSERT INTO follows (follower_id, following_id, created_at) VALUES (?, ?, datetime('now','localtime'))"
-    ).run(user.id, targetId);
-    notify(targetId, "follow", user.id, 0, 0, "关注了你");
-  }
+    if (existing) {
+      db.prepare("DELETE FROM follows WHERE id = ?").run(existing.id);
+    } else {
+      db.prepare(
+        "INSERT INTO follows (follower_id, following_id, created_at) VALUES (?, ?, datetime('now','localtime'))"
+      ).run(user.id, targetId);
+      notify(targetId, "follow", user.id, 0, 0, "关注了你");
+    }
+  }).immediate();
   revalidatePath("/", "layout");
 }

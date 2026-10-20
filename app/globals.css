@@ -2,27 +2,25 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * App tokens are mapped onto Discourse's color palette, defined in
+ * app/stylesheet/color_definitions.css (imported before this file in layout.tsx).
+ * The Discourse variables are `light-dark()` pairs and flip with `color-scheme`,
+ * so this file only needs to set the scheme; the .dark class toggles it.
+ */
 :root {
-  --bg: #f4fafb;
-  --fg: #24292f;
-  --mut: #5b7280;
-  --bd: #d5e5e8;
-  --card: #ffffff;
-  --soft: #eef6f8;
-  --input: #ffffff;
-  --link: #0369a1;
+  --bg: var(--secondary);
+  --fg: var(--primary);
+  --mut: var(--primary-medium);
+  --bd: var(--primary-low);
+  --card: var(--secondary);
+  --soft: var(--primary-very-low);
+  --input: var(--secondary);
+  --link: var(--tertiary);
   color-scheme: light;
 }
 
 .dark {
-  --bg: #0c161d;
-  --fg: #d9e4ea;
-  --mut: #8ba0aa;
-  --bd: #1e323b;
-  --card: #11222b;
-  --soft: #172c36;
-  --input: #0e1d25;
-  --link: #56c1e0;
   color-scheme: dark;
 }
 
@@ -35,8 +33,22 @@
   --color-soft: var(--soft);
   --color-input: var(--input);
   --color-link: var(--link);
-  --color-brand: #0e7490;
-  --color-brand-dark: #155e75;
+  --color-header: var(--header_background);
+  --color-brand: var(--tertiary);
+  --color-brand-dark: var(--tertiary-hover);
+  /* Tailwind status colors, retinted to the Discourse palette */
+  --color-red-400: var(--danger);
+  --color-red-500: var(--danger);
+  --color-red-600: var(--danger);
+  --color-red-700: var(--danger);
+  --color-emerald-400: var(--success);
+  --color-emerald-500: var(--success);
+  --color-emerald-600: var(--success);
+  --color-emerald-700: var(--success);
+  --color-amber-400: var(--quaternary);
+  --color-amber-500: var(--quaternary);
+  --color-amber-600: var(--quaternary);
+  --color-amber-700: var(--quaternary);
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
     Arial, sans-serif;
@@ -52,28 +64,28 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-md border border-line bg-card;
+    @apply rounded-md border-[1.5px] border-line bg-card;
   }
   .card-header {
-    @apply rounded-t-md border-b border-line bg-soft px-4 py-2.5 text-sm font-semibold;
+    @apply rounded-t-md border-b-[1.5px] border-line bg-soft px-4 py-2.5 text-sm font-semibold;
   }
   .link {
     @apply text-link hover:underline;
   }
   .btn {
-    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft;
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border-[1.5px] border-line bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft;
   }
   .btn-primary {
     @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark;
   }
   .btn-xs {
-    @apply inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-card px-2 py-1 text-xs font-medium text-muted hover:bg-soft;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border-[1.5px] border-line bg-card px-2 py-1 text-xs font-medium text-muted hover:bg-soft;
   }
   .btn-danger {
-    @apply inline-flex cursor-pointer items-center gap-1 rounded border border-red-500/40 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border-[1.5px] border-red-500/40 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400;
   }
   .input {
-    @apply w-full rounded-md border border-line bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/20;
+    @apply w-full rounded-md border-[1.5px] border-line bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/20;
   }
   .pill {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
@@ -102,15 +114,15 @@ body {
 .markdown-body ol { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
 .markdown-body li { margin: 0.25em 0; }
 .markdown-body code {
-  background: rgba(13, 90, 84, 0.08);
+  background: var(--inline-code-bg);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
 }
-.dark .markdown-body code { background: rgba(255, 255, 255, 0.1); }
 .markdown-body pre {
-  background: #1f2937;
-  color: #e5e7eb;
+  background: var(--hljs-bg);
+  color: var(--primary);
+  border: 1.5px solid var(--primary-low);
   padding: 12px 14px;
   border-radius: 8px;
   overflow-x: auto;
@@ -118,16 +130,15 @@ body {
 }
 .markdown-body pre code { background: transparent; padding: 0; color: inherit; }
 .markdown-body blockquote {
-  border-left: 4px solid rgba(20, 143, 119, 0.5);
-  padding: 0.25em 1em;
-  opacity: 0.85;
+  border-left: 5px solid var(--tertiary-low);
+  background: var(--tertiary-very-low);
+  padding: 0.5em 1em;
   margin: 0.75em 0;
 }
 .markdown-body table { border-collapse: collapse; margin: 0.75em 0; width: 100%; font-size: 0.95em; }
-.markdown-body th, .markdown-body td { border: 1px solid rgba(107, 114, 128, 0.4); padding: 6px 10px; }
+.markdown-body th, .markdown-body td { border: 1.5px solid var(--primary-low); padding: 6px 10px; }
 .markdown-body th { font-weight: 700; }
-.markdown-body a { color: #0e7490; text-decoration: underline; }
-.dark .markdown-body a { color: #38bdf8; }
+.markdown-body a { color: var(--tertiary); text-decoration: underline; }
 .markdown-body img { max-width: 100%; border-radius: 8px; }
-.markdown-body hr { border: none; border-top: 1px solid rgba(107, 114, 128, 0.35); margin: 1em 0; }
+.markdown-body hr { border: none; border-top: 1.5px solid var(--primary-low); margin: 1em 0; }
 .markdown-body .katex-display { overflow-x: auto; padding: 2px 0; }

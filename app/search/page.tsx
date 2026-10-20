@@ -13,7 +13,7 @@ export default async function SearchPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { q } = await searchParams;
-  const query = (q ?? "").trim();
+  const query = (typeof q === "string" ? q : "").trim().slice(0, 100);
   const results = query ? searchThreads(query) : [];
 
   return (
@@ -22,6 +22,7 @@ export default async function SearchPage({
       <form action="/search" className="card flex gap-2 p-3">
         <input
           name="q"
+          maxLength={100}
           defaultValue={query}
           className="input flex-1"
           placeholder="搜索帖子标题与正文…"

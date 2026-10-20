@@ -48,3 +48,7 @@ public/uploads/*
 .zcode/
 DEPLOY.md
 deploy/
+
+# browser regression artifacts
+/test-results/
+/playwright-report/

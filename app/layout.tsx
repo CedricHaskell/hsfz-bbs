@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import Header from "@/components/Header";
 import "katex/dist/katex.min.css";
+import "./stylesheet/color_definitions.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,14 +16,15 @@ export const metadata: Metadata = {
 
 const themeInit = `(function(){try{var t=localStorage.getItem('hsfz-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="zh-CN" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-screen flex-col">
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInit }} />
         <Header />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-        <footer className="mt-8 border-t border-line bg-card">
+        <footer className="mt-8 border-t-[1.5px] border-line bg-card">
           <div className="mx-auto max-w-6xl px-4 py-6 text-center text-xs text-muted">
             <p className="mb-1 text-sm font-medium tracking-widest text-ink">
               进德修业 · 格物致知

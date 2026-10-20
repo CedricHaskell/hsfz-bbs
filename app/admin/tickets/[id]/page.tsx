@@ -77,7 +77,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
 
       <div className="card">
         <div className="card-header">对话记录</div>
-        <ul className="divide-y divide-line">
+        <ul className="divide-y-[1.5px] divide-line">
           {messages.map((m) => (
             <li key={m.id} className="flex gap-3 px-4 py-3">
               <Avatar user={m} size={32} />

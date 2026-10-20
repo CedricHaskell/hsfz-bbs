@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { nowStr } from "./format";
+import { markdownMentionNames } from "./markdown-mentions";
 
 export type NotifyType = "reply" | "quote" | "mention" | "like" | "follow";
 
@@ -13,6 +14,12 @@ export function notify(
   content: string
 ) {
   if (userId <= 0 || actorId <= 0 || userId === actorId) return;
+  if (type === "like" || type === "follow") {
+    const exists = db.prepare(`SELECT 1 FROM notifications WHERE user_id = ? AND actor_id = ?
+      AND type = ? AND thread_id = ? AND created_at >= datetime('now','localtime','-1 hour') LIMIT 1`)
+      .get(userId, actorId, type, threadId);
+    if (exists) return;
+  }
   db.prepare(
     `INSERT INTO notifications (user_id, type, actor_id, thread_id, reply_id, content, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -21,17 +28,11 @@ export function notify(
 
 /** 提取正文中的 @提及（用户名需真实存在，排除自己） */
 export function mentionUserIds(content: string, excludeId: number): number[] {
-  const names = new Set(
-    Array.from(content.matchAll(/(^|[^a-zA-Z0-9_@])@([a-z0-9_]{3,20})/g)).map((m) => m[2])
-  );
-  const ids: number[] = [];
-  for (const name of names) {
-    const row = db.prepare("SELECT id FROM users WHERE username = ?").get(name) as
-      | { id: number }
-      | undefined;
-    if (row && row.id !== excludeId) ids.push(row.id);
-  }
-  return ids;
+  const limitedNames = markdownMentionNames(content, 20);
+  if (!limitedNames.length) return [];
+  const rows = db.prepare(`SELECT id FROM users WHERE username IN (${limitedNames.map(() => "?").join(",")})
+    AND id != ? AND status = 'approved' AND banned = 0`).all(...limitedNames, excludeId) as { id: number }[];
+  return rows.map((row) => row.id);
 }
 
 export function unreadNotificationCount(userId: number): number {

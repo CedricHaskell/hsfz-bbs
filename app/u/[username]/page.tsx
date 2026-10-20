@@ -8,7 +8,7 @@ import {
   likesReceived,
 } from "@/lib/queries";
 import { userPostCount } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, requireUser } from "@/lib/auth";
 import { followStats } from "@/lib/queries";
 import { toggleFollowAction } from "@/app/actions/follow";
 import { Avatar } from "@/components/Avatar";
@@ -18,9 +18,23 @@ import { ThreadList } from "@/components/ThreadList";
 import { timeAgo } from "@/lib/format";
 import { LEVELS, getLevel } from "@/lib/titles";
 
+function TabLink({ name, label, count, username, activeTab }: { name: string; label: string; count?: number; username: string; activeTab: string }) {
+  return (
+    <Link
+      href={`/u/${username}?tab=${name}`}
+      className={`-mb-px border-b-2 px-1 pb-2 text-sm font-medium ${
+        activeTab === name ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
+      }`}
+    >
+      {label}
+      {count !== undefined && <span className="ml-1 text-xs text-muted">{count}</span>}
+    </Link>
+  );
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
-  const u = getUserByUsername(username);
+  const u = (await getCurrentUser()) ? getUserByUsername(username) : undefined;
   return { title: u ? `${u.nickname}（@${u.username}）` : "用户" };
 }
 
@@ -31,12 +45,12 @@ export default async function UserProfilePage({
   params: Promise<{ username: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const me = await requireUser();
   const { username } = await params;
   const { tab } = await searchParams;
   const profile = getUserByUsername(username);
   if (!profile) notFound();
 
-  const me = await getCurrentUser();
   const fstats = followStats(profile.id, me?.id);
   const isSelf = me?.id === profile.id;
   const postCount = userPostCount(profile.id);
@@ -51,23 +65,20 @@ export default async function UserProfilePage({
   const favorites = isSelf ? userFavorites(profile.id) : [];
   const likes = likesReceived(profile.id);
 
-  const TabLink = ({ name, label, count }: { name: string; label: string; count?: number }) => (
-    <Link
-      href={`/u/${profile.username}?tab=${name}`}
-      className={`-mb-px border-b-2 px-1 pb-2 text-sm font-medium ${
-        activeTab === name ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
-      }`}
-    >
-      {label}
-      {count !== undefined && <span className="ml-1 text-xs text-muted">{count}</span>}
-    </Link>
-  );
+
 
   return (
     <div className="space-y-4">
       <div className="card p-5">
         <div className="flex flex-wrap items-start gap-4">
-          <Avatar user={profile} size={72} />
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <Avatar user={profile} size={72} />
+            {profile.avatar?.startsWith("/uploads/") && (
+              <a href={`${profile.avatar}?download=1`} download className="text-xs text-brand hover:underline">
+                下载头像
+              </a>
+            )}
+          </div>
           {me && me.id !== profile.id && (
             <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
               <Link href={`/dm/${profile.username}`} className="btn">
@@ -125,7 +136,7 @@ export default async function UserProfilePage({
                 )}
               </div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-soft">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#0e7490] to-[#148f77]" style={{ width: `${progress}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-[var(--tertiary)] to-[var(--tertiary-hover)]" style={{ width: `${progress}%` }} />
               </div>
             </div>
           </div>
@@ -133,16 +144,16 @@ export default async function UserProfilePage({
       </div>
 
       <div className="card">
-        <div className="flex gap-5 border-b border-line px-4 pt-3">
-          <TabLink name="threads" label="帖子" count={threads.length} />
-          <TabLink name="replies" label="回复" count={replies.length} />
-          {isSelf && <TabLink name="favorites" label="我的收藏" count={favorites.length} />}
+        <div className="flex gap-5 border-b-[1.5px] border-line px-4 pt-3">
+          <TabLink username={profile.username} activeTab={activeTab} name="threads" label="帖子" count={threads.length} />
+          <TabLink username={profile.username} activeTab={activeTab} name="replies" label="回复" count={replies.length} />
+          {isSelf && <TabLink username={profile.username} activeTab={activeTab} name="favorites" label="我的收藏" count={favorites.length} />}
         </div>
 
         {activeTab === "threads" && <ThreadList threads={threads} />}
         {activeTab === "favorites" && <ThreadList threads={favorites} />}
         {activeTab === "replies" && (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {replies.length === 0 && (
               <li className="px-4 py-10 text-center text-muted">还没有回复过</li>
             )}

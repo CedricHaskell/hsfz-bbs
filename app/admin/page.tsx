@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { db, getSetting } from "@/lib/db";
+import { db, getSetting, GRADES } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { TitleBadge } from "@/components/TitleBadge";
@@ -12,6 +12,7 @@ import { timeAgo, ticketCategoryName, TICKET_STATUS } from "@/lib/format";
 import { userPostCount } from "@/lib/db";
 import {
   approveUserAction,
+  setUserGradeAction,
   rejectUserAction,
   banUserAction,
   unbanUserAction,
@@ -23,11 +24,36 @@ import {
   toggleFeatureAction,
   removeBadgeAction,
 } from "@/app/actions/admin";
-import type { UserRow } from "@/lib/db";
+import { maskPhone } from "@/lib/crypto";
+import { deleteGuestRequestAction } from "@/app/actions/guest";
+
+type AdminUser = {
+  id: number; username: string; nickname: string; bio: string; avatar: string; custom_title: string;
+  role: string; status: string; banned: number; grade: string; created_at: string;
+  real_name: string; student_id: string; phone: string; email: string;
+};
 
 export const metadata = { title: "管理后台" };
 
 type Tab = "users" | "threads" | "tickets" | "site";
+
+function TabLink({ name, label, badge, activeTab }: { name: Tab; label: string; badge?: number; activeTab: Tab }) {
+  return (
+    <Link
+      href={`/admin?tab=${name}`}
+      className={`-mb-px border-b-2 px-1 pb-2 text-sm font-medium ${
+        activeTab === name ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
+      }`}
+    >
+      {label}
+      {badge ? (
+        <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+          {badge}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
 
 export default async function AdminPage({
   searchParams,
@@ -40,8 +66,11 @@ export default async function AdminPage({
     rawTab === "threads" || rawTab === "tickets" || rawTab === "site" ? rawTab : "users";
 
   const pendingUsers = db
-    .prepare("SELECT * FROM users WHERE status = 'pending' ORDER BY created_at ASC")
-    .all() as UserRow[];
+    .prepare(
+      `SELECT id, username, nickname, bio, avatar, custom_title, role, status, banned, grade, real_name, student_id, email, phone, created_at
+       FROM users WHERE status = 'pending' ORDER BY created_at ASC`
+    )
+    .all() as AdminUser[];
   const whitelist = db
     .prepare(
       `SELECT w.*, u.username AS used_username
@@ -53,8 +82,11 @@ export default async function AdminPage({
       used_by: number; used_username: string | null;
     }>;
   const allUsers = db
-    .prepare("SELECT * FROM users WHERE status != 'pending' ORDER BY id ASC")
-    .all() as UserRow[];
+    .prepare(
+      `SELECT id, username, nickname, bio, avatar, custom_title, role, status, banned, grade, real_name, student_id, email, phone, created_at
+       FROM users WHERE status != 'pending' ORDER BY id ASC`
+    )
+    .all() as AdminUser[];
   const threads = db
     .prepare(
       `SELECT t.*, b.name AS board_name, u.nickname AS author_name
@@ -72,23 +104,10 @@ export default async function AdminPage({
     .all(...(ticketFilter ? [ticketFilter] : [])) as Array<{
       id: number; category: string; subject: string; status: string; updated_at: string; user_nickname: string;
     }>;
-
-  const TabLink = ({ name, label, badge }: { name: Tab; label: string; badge?: number }) => (
-    <Link
-      href={`/admin?tab=${name}`}
-      className={`-mb-px border-b-2 px-1 pb-2 text-sm font-medium ${
-        tab === name ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
-      }`}
-    >
-      {label}
-      {badge ? (
-        <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-          {badge}
-        </span>
-      ) : null}
-    </Link>
-  );
-
+  const guestRequests = tab === "tickets" ? db.prepare(
+    "SELECT id, username, contact, detail, created_at FROM guest_requests ORDER BY id DESC LIMIT 50"
+  ).all() as Array<{ id: number; username: string; contact: string; detail: string; created_at: string }> : [];
+  const customBadge = getSetting("site_badge");
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
@@ -96,11 +115,11 @@ export default async function AdminPage({
         <p className="text-xs text-muted">仅管理员可见</p>
       </div>
 
-      <div className="flex gap-5 border-b border-line">
-        <TabLink name="users" label="用户管理" badge={pendingUsers.length} />
-        <TabLink name="threads" label="帖子管理" />
-        <TabLink name="tickets" label="工单处理" />
-        <TabLink name="site" label="站点设置" />
+      <div className="flex gap-5 border-b-[1.5px] border-line">
+        <TabLink activeTab={tab} name="users" label="用户管理" badge={pendingUsers.length} />
+        <TabLink activeTab={tab} name="threads" label="帖子管理" />
+        <TabLink activeTab={tab} name="tickets" label="工单处理" />
+        <TabLink activeTab={tab} name="site" label="站点设置" />
       </div>
 
       {/* 用户管理 */}
@@ -113,7 +132,7 @@ export default async function AdminPage({
             {pendingUsers.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-muted">暂无待审核的注册申请</p>
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y-[1.5px] divide-line">
                 {pendingUsers.map((u) => (
                   <li key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Avatar user={u} size={36} />
@@ -123,9 +142,17 @@ export default async function AdminPage({
                       </span>
                       <span className="block truncate text-xs text-muted">
                         {u.grade && `${u.grade} · `}
-                        {u.bio || "（无签名）"}
+                        {u.real_name || "（旧账号未保存实名）"} · 学号 {u.student_id || "未保存"} · {maskPhone(u.phone)}
                       </span>
                     </span>
+                    <form action={setUserGradeAction} className="flex items-center gap-1">
+                      <input type="hidden" name="user_id" value={u.id} />
+                      <select name="grade" defaultValue={u.grade} aria-label={`核实 ${u.username} 的年级`} className="input !w-24 !py-1 !text-xs">
+                        <option value="">未填写</option>
+                        {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                      </select>
+                      <button type="submit" className="btn-xs">确认年级</button>
+                    </form>
                     <form action={approveUserAction}>
                       <input type="hidden" name="user_id" value={u.id} />
                       <button type="submit" className="btn-xs !border-emerald-500/30 !text-emerald-700 hover:!bg-emerald-500/10 dark:!text-emerald-400">
@@ -147,11 +174,11 @@ export default async function AdminPage({
 
           <div className="card">
             <div className="card-header flex items-center justify-between">
-              <span>📋 校友名单（免审核注册 · {whitelist.length} 条）</span>
+              <span>📋 校友名单（审核参考 · {whitelist.length} 条）</span>
             </div>
             <WhitelistImportForm />
             {whitelist.length > 0 && (
-              <ul className="max-h-72 divide-y divide-line overflow-auto border-t border-line">
+              <ul className="max-h-72 divide-y-[1.5px] divide-line overflow-auto border-t-[1.5px] border-line">
                 {whitelist.map((w) => (
                   <li key={w.id} className="flex items-center gap-3 px-4 py-2 text-sm">
                     <span className="flex-1">
@@ -185,7 +212,7 @@ export default async function AdminPage({
 
           <div className="card">
             <div className="card-header">👥 全部用户（{allUsers.length}）</div>
-            <ul className="divide-y divide-line">
+            <ul className="divide-y-[1.5px] divide-line">
               {allUsers.map((u) => {
                 const pc = userPostCount(u.id);
                 return (
@@ -204,6 +231,14 @@ export default async function AdminPage({
                       </span>
                       <span className="block text-xs text-muted">发帖 {pc} 条 · 加入于 {u.created_at.slice(0, 10)}</span>
                     </span>
+                    <form action={setUserGradeAction} className="flex items-center gap-1">
+                      <input type="hidden" name="user_id" value={u.id} />
+                      <select name="grade" defaultValue={u.grade} aria-label={`核实 ${u.username} 的年级`} className="input !w-24 !py-1 !text-xs">
+                        <option value="">未填写</option>
+                        {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                      </select>
+                      <button type="submit" className="btn-xs">确认年级</button>
+                    </form>
                     <form action={setCustomTitleAction} className="flex items-center gap-1">
                       <input type="hidden" name="user_id" value={u.id} />
                       <input
@@ -266,6 +301,9 @@ export default async function AdminPage({
                 </ConfirmSubmit>
               </form>
             )}
+            {customBadge.startsWith("/uploads/") && (
+              <a href={`${customBadge}?download=1`} download className="mt-3 inline-block text-xs text-brand hover:underline">下载徽章</a>
+            )}
           </div>
           <div className="card">
             <div className="card-header">🏷️ 上传站点徽章（学校校徽）</div>
@@ -278,7 +316,7 @@ export default async function AdminPage({
       {tab === "threads" && (
         <div className="card">
           <div className="card-header">🗂️ 最近帖子（{threads.length}）</div>
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {threads.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                 <span className="min-w-0 flex-1">
@@ -321,6 +359,31 @@ export default async function AdminPage({
       {/* 工单处理 */}
       {tab === "tickets" && (
         <div className="space-y-3">
+          <section className="card" aria-label="登录求助">
+            <div className="card-header">登录求助（{guestRequests.length}）</div>
+            {guestRequests.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted">暂无登录求助</p>
+            ) : (
+              <ul className="divide-y-[1.5px] divide-line">
+                {guestRequests.map((request) => (
+                  <li key={request.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1 space-y-1 break-words text-sm">
+                      <p className="font-medium">{request.username ? `@${request.username}` : "未填写用户名"}</p>
+                      <p>联系方式：{request.contact}</p>
+                      <p className="whitespace-pre-wrap">{request.detail}</p>
+                      <p className="text-xs text-muted">{timeAgo(request.created_at)}</p>
+                    </div>
+                    <form action={deleteGuestRequestAction}>
+                      <input type="hidden" name="id" value={request.id} />
+                      <ConfirmSubmit className="btn-danger" message="处理完成后删除这条求助？" confirmText="确认删除">
+                        处理完成并删除
+                      </ConfirmSubmit>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <div className="flex gap-2 text-xs">
             {[
               { key: "", label: "全部" },
@@ -332,7 +395,7 @@ export default async function AdminPage({
                 key={f.key}
                 href={`/admin?tab=tickets${f.key ? `&status=${f.key}` : ""}`}
                 className={`pill ${
-                  (status ?? "") === f.key ? "bg-brand text-white" : "border border-line bg-card text-muted hover:bg-soft"
+                  (status ?? "") === f.key ? "bg-brand text-white" : "border-[1.5px] border-line bg-card text-muted hover:bg-soft"
                 }`}
               >
                 {f.label}
@@ -344,7 +407,7 @@ export default async function AdminPage({
             {tickets.length === 0 ? (
               <p className="px-4 py-10 text-center text-muted">暂无工单</p>
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y-[1.5px] divide-line">
                 {tickets.map((t) => {
                   const st = TICKET_STATUS[t.status] ?? TICKET_STATUS.open;
                   return (
