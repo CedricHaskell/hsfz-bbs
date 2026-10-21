@@ -25,7 +25,17 @@ export default async function CategoryPage({
     ? UNIV_CITY_ORDER.map((city) => ({
         city,
         items: boards.filter((b) => b.city === city),
-      })).filter((g) => g.items.length)
+      }))
+        .concat(
+          (() => {
+            // 防御：城市字段不在序列中的板块归入「其他」，避免漏显示
+            const stray = boards.filter(
+              (b) => !UNIV_CITY_ORDER.includes(b.city ?? "")
+            );
+            return stray.length ? [{ city: "其他", items: stray }] : [];
+          })()
+        )
+        .filter((g) => g.items.length)
     : [];
 
   return (

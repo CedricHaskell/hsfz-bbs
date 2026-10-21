@@ -451,8 +451,12 @@ function ensureGradeBoards() {
     `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort, grade_lock, city)
      VALUES (?, ?, ?, ?, '大学', ?, '', ?)`
   );
+  const updCity = db.prepare(
+    "UPDATE boards SET city = ? WHERE slug = ? AND (city IS NULL OR city = '')"
+  );
   for (const [i, [city, slug, name, icon]] of universities.entries()) {
     insUniv.run(slug, name, `${name}的华附人，在这里集合`, icon, 30 + i, city);
+    updCity.run(city, slug);
   }
 
   // 游戏分区：游戏讨论
