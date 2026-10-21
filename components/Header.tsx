@@ -4,7 +4,7 @@ import { unreadTicketCount, openTicketCount, unreadNotificationCount } from "@/l
 import { unreadDmCount } from "@/lib/dm";
 import { Avatar } from "./Avatar";
 import SiteBadge from "./SiteBadge";
-import ThemeToggle from "./ThemeToggle";
+import ThemeMenu from "./ThemeMenu";
 import { IconSearch } from "./icons";
 import { logoutAction } from "@/app/actions/auth";
 
@@ -67,7 +67,7 @@ export default async function Header() {
           </div>
         </form>
 
-        <ThemeToggle />
+        <ThemeMenu />
 
         {user ? (
           <div className="flex shrink-0 items-center gap-2">

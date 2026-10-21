@@ -14,7 +14,12 @@ export const metadata: Metadata = {
   description: "华南师范大学附属中学校园论坛：学习交流、社团活动、二手交易、失物招领与校园生活分享。",
 };
 
-const themeInit = `(function(){try{var t=localStorage.getItem('hsfz-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+const themeInit = `(function(){try{
+  var p = localStorage.getItem('hsfz-theme-preset') || localStorage.getItem('hsfz-theme') || 'teal';
+  if (p === 'light' || p === 'discourse') p = 'teal';
+  if (p === 'dark') document.documentElement.classList.add('dark');
+  document.documentElement.setAttribute('data-theme', p);
+}catch(e){}})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;

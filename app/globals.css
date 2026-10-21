@@ -142,3 +142,68 @@ body {
 .markdown-body img { max-width: 100%; border-radius: 8px; }
 .markdown-body hr { border: none; border-top: 1.5px solid var(--primary-low); margin: 1em 0; }
 .markdown-body .katex-display { overflow-x: auto; padding: 2px 0; }
+
+/* ============ 多主题：原版青绿 / 蔚蓝（覆盖 Discourse 变量层的语义映射） ============ */
+[data-theme="teal"] {
+  color-scheme: light;
+  --primary: #1f3d38;
+  --secondary: #ffffff;
+  --tertiary: #148f77;
+  --tertiary-hover: #0e7490;
+  --header_background: #148f77;
+  --header_primary: #ffffff;
+  --primary-medium: #5f7d76;
+  --primary-low: #dcebe7;
+  --primary-very-low: #eef6f3;
+  --primary-very-high: #f2faf7;
+  --d-hover: #e8f3f0;
+  --danger: #c0392b;
+  --success: #148f77;
+  --quaternary: #b7791f;
+}
+[data-theme="teal"] header {
+  background: linear-gradient(135deg, #1a5276 0%, #148f77 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+[data-theme="teal"] header .text-ink { color: #ffffff; }
+[data-theme="teal"] header .text-muted { color: rgba(255, 255, 255, 0.75); }
+[data-theme="teal"] header .btn { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); color: #fff; }
+[data-theme="teal"] header .btn:hover { background: rgba(255, 255, 255, 0.24); }
+[data-theme="teal"] header .input {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+[data-theme="teal"] header .input::placeholder { color: rgba(255, 255, 255, 0.6); }
+
+[data-theme="blue"] {
+  color-scheme: light;
+  --primary: #1e293b;
+  --secondary: #ffffff;
+  --tertiary: #2563eb;
+  --tertiary-hover: #1d4ed8;
+  --header_background: #1e3a8a;
+  --header_primary: #ffffff;
+  --primary-medium: #64748b;
+  --primary-low: #dbe4f3;
+  --primary-very-low: #eef3fa;
+  --primary-very-high: #f4f8ff;
+  --d-hover: #eaf1fb;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --quaternary: #d97706;
+}
+[data-theme="blue"] header {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+[data-theme="blue"] header .text-ink { color: #ffffff; }
+[data-theme="blue"] header .text-muted { color: rgba(255, 255, 255, 0.75); }
+[data-theme="blue"] header .btn { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); color: #fff; }
+[data-theme="blue"] header .btn:hover { background: rgba(255, 255, 255, 0.24); }
+[data-theme="blue"] header .input {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+[data-theme="blue"] header .input::placeholder { color: rgba(255, 255, 255, 0.6); }
