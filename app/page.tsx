@@ -1,21 +1,9 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { allBoards, hotThreads, siteStats, threadsSorted, announcementThreads, featuredThreads } from "@/lib/queries";
+import { CAT_ORDER, CAT_EMOJI, CAT_DESC } from "@/lib/categories";
 import { ThreadList } from "@/components/ThreadList";
 import { fmtNum } from "@/lib/format";
-
-const CAT_ORDER = ["学习成长", "年级群", "大学", "生活娱乐", "球友", "游戏", "交易互助", "情感联结", "官方"];
-const CAT_EMOJI: Record<string, string> = {
-  学习成长: "📖",
-  年级群: "🎓",
-  生活娱乐: "🎨",
-  大学: "🎓",
-  球友: "🏀",
-  游戏: "🎮",
-  交易互助: "🤝",
-  情感联结: "💚",
-  官方: "📢",
-};
 
 const SORTS = [
   { key: "latest", label: "最新" },
@@ -55,37 +43,32 @@ export default async function HomePage({
 
   return (
     <div className="space-y-6">
-      {user && <section>
+      <section>
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-base font-semibold">板块导航</h2>
-          <span className="text-xs text-muted">共 {boards.length} 个板块</span>
+          <h2 className="text-base font-semibold">🗂️ 板块分类</h2>
+          <span className="text-xs text-muted">共 {boards.length} 个板块 · 点击进入分区</span>
         </div>
-        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {grouped.map(({ cat, items }) => (
-            <div key={cat} className="card p-3">
-              <p className="mb-2 text-xs font-semibold text-muted">
-                {CAT_EMOJI[cat]} {cat}
-              </p>
-              <ul className="space-y-1.5">
-                {items.map((b) => (
-                  <li key={b.id}>
-                    <Link
-                      href={`/b/${b.slug}`}
-                      className="group flex items-center justify-between gap-1 text-sm leading-6"
-                      title={b.description}
-                    >
-                      <span className="min-w-0 truncate group-hover:text-brand group-hover:underline">
-                        {b.icon} {b.name}
-                      </span>
-                      <span className="shrink-0 text-xs text-muted">{b.thread_count}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CAT_ORDER.map((cat) => {
+            const items = boards.filter((b) => b.category === cat);
+            return (
+              <Link
+                key={cat}
+                href={`/c/${encodeURIComponent(cat)}`}
+                className="card group p-4 transition-colors hover:border-brand"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-semibold group-hover:text-brand">
+                    {CAT_EMOJI[cat]} {cat}
+                  </p>
+                  <span className="text-xs text-muted">{items.length} 板块</span>
+                </div>
+                <p className="mt-1.5 text-xs leading-5 text-muted">{CAT_DESC[cat]}</p>
+              </Link>
+            );
+          })}
         </div>
-      </section>}
+      </section>
 
       {featured.length > 0 && (
         <section>

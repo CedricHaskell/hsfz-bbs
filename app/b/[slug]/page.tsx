@@ -23,6 +23,9 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="space-y-4">
+      <Link href={`/c/${encodeURIComponent(board.category)}`} className="inline-block text-xs text-muted hover:text-brand hover:underline">
+        ← {board.category}
+      </Link>
       <div className="card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

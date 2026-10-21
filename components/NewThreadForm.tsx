@@ -6,24 +6,12 @@ import type { ActionState } from "@/app/actions/auth";
 import type { BoardRow } from "@/lib/queries";
 import { EmojiPicker } from "./EmojiPicker";
 import { formatEditorSelection, type EditorCommand } from "@/lib/editor";
+import { CAT_ORDER, CAT_EMOJI } from "@/lib/categories";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
 import { AttachmentPicker } from "./AttachmentPicker";
 import { DOCUMENT_LIMITS } from "@/lib/attachment-limits";
-
-const CAT_ORDER = ["学习成长", "年级群", "大学", "生活娱乐", "球友", "游戏", "交易互助", "情感联结", "官方"];
-const CAT_EMOJI: Record<string, string> = {
-  学习成长: "📖",
-  年级群: "🎓",
-  生活娱乐: "🎨",
-  大学: "🎓",
-  球友: "🏀",
-  游戏: "🎮",
-  交易互助: "🤝",
-  情感联结: "💚",
-  官方: "📢",
-};
 
 export function NewThreadForm({
   boards,

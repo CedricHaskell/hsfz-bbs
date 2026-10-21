@@ -5,7 +5,7 @@ export type ThreadRow = {
   images: string; anonymous: number;
   views: number; reply_count: number; is_pinned: number; is_featured: number;
   created_at: string; last_reply_at: string;
-  slug: string; board_name: string; board_icon: string; grade_lock: string;
+  slug: string; board_name: string; board_icon: string; grade_lock: string; city: string;
   author_name: string; author_username: string; author_avatar: string; author_title: string;
   like_count: number;
 };
@@ -95,7 +95,7 @@ export function threadReplies(threadId: number) {
 
 export type BoardRow = {
   id: number; slug: string; name: string; description: string; icon: string; category: string; sort: number;
-  grade_lock: string;
+  grade_lock: string; city: string;
   thread_count: number;
 };
 
