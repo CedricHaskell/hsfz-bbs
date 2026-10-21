@@ -125,7 +125,7 @@ export default async function UserProfilePage({
                 )}
               </div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-soft">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#0e7490] to-[#148f77]" style={{ width: `${progress}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-[var(--tertiary)] to-[var(--tertiary-hover)]" style={{ width: `${progress}%` }} />
               </div>
             </div>
           </div>
@@ -133,7 +133,7 @@ export default async function UserProfilePage({
       </div>
 
       <div className="card">
-        <div className="flex gap-5 border-b border-line px-4 pt-3">
+        <div className="flex gap-5 border-b-[1.5px] border-line px-4 pt-3">
           <TabLink name="threads" label="帖子" count={threads.length} />
           <TabLink name="replies" label="回复" count={replies.length} />
           {isSelf && <TabLink name="favorites" label="我的收藏" count={favorites.length} />}
@@ -142,7 +142,7 @@ export default async function UserProfilePage({
         {activeTab === "threads" && <ThreadList threads={threads} />}
         {activeTab === "favorites" && <ThreadList threads={favorites} />}
         {activeTab === "replies" && (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {replies.length === 0 && (
               <li className="px-4 py-10 text-center text-muted">还没有回复过</li>
             )}

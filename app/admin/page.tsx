@@ -96,7 +96,7 @@ export default async function AdminPage({
         <p className="text-xs text-muted">仅管理员可见</p>
       </div>
 
-      <div className="flex gap-5 border-b border-line">
+      <div className="flex gap-5 border-b-[1.5px] border-line">
         <TabLink name="users" label="用户管理" badge={pendingUsers.length} />
         <TabLink name="threads" label="帖子管理" />
         <TabLink name="tickets" label="工单处理" />
@@ -113,7 +113,7 @@ export default async function AdminPage({
             {pendingUsers.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-muted">暂无待审核的注册申请</p>
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y-[1.5px] divide-line">
                 {pendingUsers.map((u) => (
                   <li key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Avatar user={u} size={36} />
@@ -151,7 +151,7 @@ export default async function AdminPage({
             </div>
             <WhitelistImportForm />
             {whitelist.length > 0 && (
-              <ul className="max-h-72 divide-y divide-line overflow-auto border-t border-line">
+              <ul className="max-h-72 divide-y-[1.5px] divide-line overflow-auto border-t-[1.5px] border-line">
                 {whitelist.map((w) => (
                   <li key={w.id} className="flex items-center gap-3 px-4 py-2 text-sm">
                     <span className="flex-1">
@@ -185,7 +185,7 @@ export default async function AdminPage({
 
           <div className="card">
             <div className="card-header">👥 全部用户（{allUsers.length}）</div>
-            <ul className="divide-y divide-line">
+            <ul className="divide-y-[1.5px] divide-line">
               {allUsers.map((u) => {
                 const pc = userPostCount(u.id);
                 return (
@@ -278,7 +278,7 @@ export default async function AdminPage({
       {tab === "threads" && (
         <div className="card">
           <div className="card-header">🗂️ 最近帖子（{threads.length}）</div>
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {threads.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                 <span className="min-w-0 flex-1">
@@ -332,7 +332,7 @@ export default async function AdminPage({
                 key={f.key}
                 href={`/admin?tab=tickets${f.key ? `&status=${f.key}` : ""}`}
                 className={`pill ${
-                  (status ?? "") === f.key ? "bg-brand text-white" : "border border-line bg-card text-muted hover:bg-soft"
+                  (status ?? "") === f.key ? "bg-brand text-white" : "border-[1.5px] border-line bg-card text-muted hover:bg-soft"
                 }`}
               >
                 {f.label}
@@ -344,7 +344,7 @@ export default async function AdminPage({
             {tickets.length === 0 ? (
               <p className="px-4 py-10 text-center text-muted">暂无工单</p>
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y-[1.5px] divide-line">
                 {tickets.map((t) => {
                   const st = TICKET_STATUS[t.status] ?? TICKET_STATUS.open;
                   return (

@@ -35,7 +35,7 @@ export default async function MessagesPage() {
       {notifications.length > 0 && (
         <div className="card">
           <div className="card-header">🔔 互动通知（{notifications.length}）</div>
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {notifications.map((n) => (
               <li key={n.id}>
                 <Link
@@ -81,7 +81,7 @@ export default async function MessagesPage() {
         {tickets.length === 0 ? (
           <p className="px-4 py-10 text-center text-muted">还没有工单，有问题或建议就发一张吧～</p>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {tickets.map((t) => {
               const st = TICKET_STATUS[t.status] ?? TICKET_STATUS.open;
               return (

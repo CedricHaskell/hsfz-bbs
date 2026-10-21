@@ -31,7 +31,7 @@ export default async function DmPage() {
             还没有私信。去同学的个人主页点「发私信」，或在上面的输入框里输入 TA 的用户名～
           </p>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y-[1.5px] divide-line">
             {conversations.map((c) => (
               <li key={c.other.id}>
                 <Link

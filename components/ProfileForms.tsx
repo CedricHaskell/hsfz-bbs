@@ -136,7 +136,7 @@ export function AvatarUploadForm() {
         name="avatar"
         accept="image/jpeg,image/png,image/webp,image/gif"
         required
-        className="block w-full cursor-pointer rounded-md border border-line bg-input text-sm file:mr-3 file:cursor-pointer file:rounded-l-md file:border-0 file:border-r file:border-line file:bg-soft file:px-3 file:py-2 file:text-sm file:font-medium"
+        className="block w-full cursor-pointer rounded-md border-[1.5px] border-line bg-input text-sm file:mr-3 file:cursor-pointer file:rounded-l-md file:border-0 file:border-r file:border-line file:bg-soft file:px-3 file:py-2 file:text-sm file:font-medium"
       />
       <p className="text-xs text-muted">支持 JPG / PNG / WEBP / GIF，不超过 2MB，展示时按方形裁剪。</p>
       <div className="flex justify-end">

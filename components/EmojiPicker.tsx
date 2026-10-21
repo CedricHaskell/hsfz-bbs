@@ -46,7 +46,7 @@ export function EmojiPicker({
         😀
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-1 grid w-72 grid-cols-8 gap-1 rounded-md border border-line bg-card p-2 shadow-lg">
+        <div className="absolute right-0 z-50 mt-1 grid w-72 grid-cols-8 gap-1 rounded-md border-[1.5px] border-line bg-card p-2 shadow-lg">
           {EMOJIS.map((e, i) => (
             <button
               key={i}

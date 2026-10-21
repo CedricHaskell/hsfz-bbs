@@ -61,7 +61,7 @@ export default async function HomePage({
                       className="group flex items-center justify-between gap-1 text-sm"
                       title={b.description}
                     >
-                      <span className="truncate group-hover:text-brand group-hover:underline">
+                      <span className="min-w-0 truncate group-hover:text-brand group-hover:underline">
                         {b.icon} {b.name}
                       </span>
                       <span className="shrink-0 text-xs text-muted">{b.thread_count}</span>
@@ -75,7 +75,7 @@ export default async function HomePage({
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <section className="card">
+        <section className="card min-w-0">
           <div className="card-header flex items-center justify-between">
             <span>🔥 最新动态</span>
             {user ? (
@@ -90,7 +90,7 @@ export default async function HomePage({
           </div>
           {user ? (
             <>
-              <div className="flex gap-2 border-b border-line px-4 py-2 text-xs">
+              <div className="flex flex-wrap gap-2 border-b-[1.5px] border-line px-4 py-2 text-xs">
                 {SORTS.map((s) => (
                   <Link
                     key={s.key}
@@ -121,7 +121,7 @@ export default async function HomePage({
               {announcements.length > 0 && (
                 <div className="mt-6 text-left">
                   <p className="mb-2 px-4 text-xs font-semibold text-muted">📢 站务公告（游客可见）</p>
-                  <ul className="divide-y divide-line">
+                  <ul className="divide-y-[1.5px] divide-line">
                     {announcements.map((t) => (
                       <li key={t.id}>
                         <Link href={`/t/${t.id}`} className="block px-4 py-2.5 text-sm hover:bg-soft/60">
@@ -140,10 +140,10 @@ export default async function HomePage({
           {user && (
           <div className="card">
             <div className="card-header">⚡ 热门话题</div>
-            <ol className="divide-y divide-line">
+            <ol className="divide-y-[1.5px] divide-line">
               {hot.map((t, i) => (
                 <li key={t.id} className="flex gap-2 px-3 py-2.5 text-sm">
-                  <span className={`w-4 shrink-0 text-center font-semibold ${i < 3 ? "text-[#d1242f]" : "text-muted"}`}>
+                  <span className={`w-4 shrink-0 text-center font-semibold ${i < 3 ? "text-[var(--danger)]" : "text-muted"}`}>
                     {i + 1}
                   </span>
                   <Link href={`/t/${t.id}`} className="line-clamp-2 flex-1 hover:text-brand hover:underline">

@@ -1,0 +1,493 @@
+// Self-contained port of Discourse's color system.
+// Source of truth for the app's palette — imported as the compiled
+// color_definitions.css (recompile with: npx sass --no-source-map
+// color_definitions.scss color_definitions.css).
+//
+// Light palette = Discourse default scheme (common/foundation/colors.scss).
+// Dark palette  = Discourse built-in "Dark" scheme (app/models/color_scheme.rb).
+//
+// Colors are emitted as CSS `light-dark()` pairs, so they flip automatically
+// with the `color-scheme` property (globals.css sets it via the .dark class).
+// Non-color values (RGB triplets, shadow opacities) are emitted in a `.dark`
+// override block instead, since light-dark() only accepts colors.
+//
+// The derivation functions (dc-color-brightness, srgb-scale, dark-light-diff,
+// blend-two-colors, blend-header-primary-background) are ported verbatim from
+// Discourse's common/foundation/variables.scss and color_transformations.scss.
+
+@use "sass:color";
+@use "sass:map";
+@use "sass:math";
+
+// ---------------------------------------------------------------------------
+// Helpers (ported from common/foundation/variables.scss)
+// ---------------------------------------------------------------------------
+
+// W3C definition of color brightness https://www.w3.org/TR/AERT#color-contrast
+@function dc-color-brightness($color) {
+  @return (
+    (color.channel($color, "red", $space: rgb) * 0.299) +
+      (color.channel($color, "green", $space: rgb) * 0.587) +
+      (color.channel($color, "blue", $space: rgb) * 0.114)
+  );
+}
+
+// Uses an approximation of sRGB blending, GAMMA=2 instead of GAMMA=2.2
+@function srgb-scale($foreground, $background, $percent) {
+  $ratio: math.div($percent, 100%);
+  $iratio: 1 - $ratio;
+  $f_r2: color.channel($foreground, "red", $space: rgb) * color.channel($foreground, "red", $space: rgb);
+  $f_g2: color.channel($foreground, "green", $space: rgb) * color.channel($foreground, "green", $space: rgb);
+  $f_b2: color.channel($foreground, "blue", $space: rgb) * color.channel($foreground, "blue", $space: rgb);
+  $b_r2: color.channel($background, "red", $space: rgb) * color.channel($background, "red", $space: rgb);
+  $b_g2: color.channel($background, "green", $space: rgb) * color.channel($background, "green", $space: rgb);
+  $b_b2: color.channel($background, "blue", $space: rgb) * color.channel($background, "blue", $space: rgb);
+  $r_r2: $f_r2 * $ratio + $b_r2 * $iratio;
+  $r_g2: $f_g2 * $ratio + $b_g2 * $iratio;
+  $r_b2: $f_b2 * $ratio + $b_b2 * $iratio;
+  // Rounding matches Discourse's own custom sqrt, which returns integers
+  $r_r: math.round(math.sqrt($r_r2));
+  $r_g: math.round(math.sqrt($r_g2));
+  $r_b: math.round(math.sqrt($r_b2));
+
+  @return rgb($r_r, $r_g, $r_b);
+}
+
+@function blend-two-colors($color1, $color2, $percent) {
+  @return srgb-scale($color1, $color2, $percent);
+}
+
+@function blend-header-primary-background($header-primary, $header-background, $percent) {
+  @return srgb-scale($header-primary, $header-background, $percent);
+}
+
+// If the adjusted color is darker than the comparison color, apply the light
+// adjustment; otherwise apply the dark adjustment. This is how Discourse makes
+// one set of transformations work for both light and dark schemes.
+@function dark-light-diff($adjusted-color, $comparison-color, $lightness, $darkness) {
+  @if dc-color-brightness($adjusted-color) <
+    dc-color-brightness($comparison-color)
+  {
+    @return color.scale($adjusted-color, $lightness: $lightness);
+  } @else {
+    @return color.scale($adjusted-color, $lightness: $darkness);
+  }
+}
+
+// Stand-in for Discourse's dark-light-choose() (which switches on the scheme's
+// primary/secondary brightness — equivalent to our explicit $is-dark flag).
+@function choose($is-dark, $dark-value, $light-value) {
+  @if $is-dark {
+    @return $dark-value;
+  } @else {
+    @return $light-value;
+  }
+}
+
+@function hexToRGB($hex) {
+  @return color.channel($hex, "red", $space: rgb), color.channel($hex, "green", $space: rgb), color.channel($hex, "blue", $space: rgb);
+}
+
+// ---------------------------------------------------------------------------
+// Scheme-independent constants (ported from common/foundation/variables.scss)
+// ---------------------------------------------------------------------------
+
+$wiki: #008000;
+$gold: rgb(231, 195, 0);
+$silver: #c0c0c0;
+$bronze: #cd7f32;
+
+$google: #fff;
+$google-hover: color.adjust($google, $lightness: -5%);
+$instagram: #e1306c;
+$instagram-hover: color.adjust($instagram, $lightness: -15%);
+$facebook: #0866ff;
+$facebook-hover: color.adjust($facebook, $lightness: -15%);
+$cas: #70ba61;
+$twitter: #000;
+$github: #100e0f;
+$github-hover: color.adjust($github, $lightness: 20%);
+$discord: #7289da;
+$discord-hover: color.adjust($discord, $lightness: -10%);
+
+// ---------------------------------------------------------------------------
+// Scheme derivation (ported from common/foundation/colors.scss and
+// color_transformations.scss)
+// ---------------------------------------------------------------------------
+
+@function ds-palette(
+  $primary, $secondary, $tertiary, $quaternary,
+  $header-background, $header-primary, $highlight, $selected, $hover,
+  $danger, $success, $love, $is-dark
+) {
+  // primary-100 (inline code background in light mode) is reused below
+  $primary-100: dark-light-diff($primary, $secondary, 94%, -80%);
+
+  @return (
+    // base
+    "primary": $primary,
+    "secondary": $secondary,
+    "tertiary": $tertiary,
+    "quaternary": $quaternary,
+    "header_background": $header-background,
+    "header_primary": $header-primary,
+    "highlight": $highlight,
+    "danger": $danger,
+    "success": $success,
+    "love": $love,
+    "selected": $selected,
+    "hover": $hover,
+    "selected-hover": dark-light-diff($selected, $secondary, 20%, 20%),
+    // primary
+    "primary-very-low": dark-light-diff($primary, $secondary, 97%, -82%),
+    "primary-low": dark-light-diff($primary, $secondary, 90%, -78%),
+    "primary-low-mid": dark-light-diff($primary, $secondary, 70%, -45%),
+    "primary-medium": dark-light-diff($primary, $secondary, 50%, -35%),
+    "primary-high": dark-light-diff($primary, $secondary, 30%, -25%),
+    "primary-very-high": dark-light-diff($primary, $secondary, 15%, -10%),
+    // primary numbers
+    "primary-50": dark-light-diff($primary, $secondary, 97%, -82%),
+    "primary-100": $primary-100,
+    "primary-200": dark-light-diff($primary, $secondary, 90%, -78%),
+    "primary-300": dark-light-diff($primary, $secondary, 80%, -60%),
+    "primary-400": dark-light-diff($primary, $secondary, 70%, -45%),
+    "primary-500": dark-light-diff($primary, $secondary, 60%, -40%),
+    "primary-600": dark-light-diff($primary, $secondary, 50%, -35%),
+    "primary-700": dark-light-diff($primary, $secondary, 38%, -30%),
+    "primary-800": dark-light-diff($primary, $secondary, 30%, -25%),
+    "primary-900": dark-light-diff($primary, $secondary, 15%, -10%),
+    // header
+    "header_primary-low": blend-header-primary-background($header-primary, $header-background, 10%),
+    "header_primary-low-mid": blend-header-primary-background($header-primary, $header-background, 35%),
+    "header_primary-medium": blend-header-primary-background($header-primary, $header-background, 55%),
+    "header_primary-high": blend-header-primary-background($header-primary, $header-background, 70%),
+    "header_primary-very-high": blend-header-primary-background($header-primary, $header-background, 90%),
+    // secondary
+    "secondary-low": dark-light-diff($secondary, $primary, 70%, -70%),
+    "secondary-medium": dark-light-diff($secondary, $primary, 50%, -50%),
+    "secondary-high": dark-light-diff($secondary, $primary, 30%, -35%),
+    "secondary-very-high": dark-light-diff($secondary, $primary, 7%, -7%),
+    // tertiary
+    "tertiary-very-low": dark-light-diff($tertiary, $secondary, 90%, -75%),
+    "tertiary-low": dark-light-diff($tertiary, $secondary, 85%, -65%),
+    "tertiary-medium": dark-light-diff($tertiary, $secondary, 50%, -45%),
+    "tertiary-high": dark-light-diff($tertiary, $secondary, 20%, -25%),
+    "tertiary-hover": choose(
+      $is-dark,
+      dark-light-diff($tertiary, $primary, 20%, 70%),
+      dark-light-diff($tertiary, $secondary, -25%, -25%)
+    ),
+    // tertiary numbers
+    "tertiary-25": dark-light-diff($tertiary, $secondary, 93%, -80%),
+    "tertiary-50": dark-light-diff($tertiary, $secondary, 90%, -75%),
+    "tertiary-100": dark-light-diff($tertiary, $secondary, 88%, -72%),
+    "tertiary-200": dark-light-diff($tertiary, $secondary, 87%, -69%),
+    "tertiary-300": dark-light-diff($tertiary, $secondary, 85%, -65%),
+    "tertiary-400": dark-light-diff($tertiary, $secondary, 74%, -58%),
+    "tertiary-500": dark-light-diff($tertiary, $secondary, 63%, -52%),
+    "tertiary-600": dark-light-diff($tertiary, $secondary, 50%, -45%),
+    "tertiary-700": dark-light-diff($tertiary, $secondary, 40%, -38%),
+    "tertiary-800": dark-light-diff($tertiary, $secondary, 30%, -31%),
+    "tertiary-900": dark-light-diff($tertiary, $secondary, 20%, -25%),
+    // quaternary
+    "quaternary-low": dark-light-diff($quaternary, $secondary, 70%, -70%),
+    // highlight
+    "highlight-bg": dark-light-diff($highlight, $secondary, 70%, -80%),
+    "highlight-low": dark-light-diff($highlight, $secondary, 70%, -80%),
+    "highlight-medium": dark-light-diff($highlight, $secondary, 50%, -55%),
+    "highlight-high": dark-light-diff($highlight, $secondary, -50%, -10%),
+    // danger
+    "danger-low": dark-light-diff($danger, $secondary, 90%, -68%),
+    "danger-low-mid": dark-light-diff(rgb($danger, 0.7), $secondary, 50%, -60%),
+    "danger-medium": dark-light-diff($danger, $secondary, 30%, -35%),
+    "danger-hover": dark-light-diff($danger, $secondary, -20%, -20%),
+    // success
+    "success-very-low": dark-light-diff($success, $secondary, 90%, -70%),
+    "success-low": dark-light-diff($success, $secondary, 80%, -60%),
+    "success-medium": dark-light-diff($success, $secondary, 50%, -40%),
+    "success-hover": dark-light-diff($success, $secondary, -20%, -20%),
+    // love
+    "love-low": dark-light-diff($love, $secondary, 85%, -60%),
+    // blended variants
+    "blend-primary-secondary-5": blend-two-colors($primary, $secondary, 5%),
+    "primary-med-or-secondary-med": choose($is-dark, dark-light-diff($secondary, $primary, 50%, -50%), dark-light-diff($primary, $secondary, 50%, -35%)),
+    "primary-med-or-secondary-high": choose($is-dark, dark-light-diff($secondary, $primary, 30%, -35%), dark-light-diff($primary, $secondary, 50%, -35%)),
+    "primary-high-or-secondary-low": choose($is-dark, dark-light-diff($secondary, $primary, 70%, -70%), dark-light-diff($primary, $secondary, 30%, -25%)),
+    "primary-low-mid-or-secondary-high": choose($is-dark, dark-light-diff($secondary, $primary, 30%, -35%), dark-light-diff($primary, $secondary, 70%, -45%)),
+    "primary-low-mid-or-secondary-low": choose($is-dark, dark-light-diff($secondary, $primary, 70%, -70%), dark-light-diff($primary, $secondary, 70%, -45%)),
+    "primary-or-primary-low-mid": choose($is-dark, dark-light-diff($primary, $secondary, 70%, -45%), $primary),
+    "highlight-low-or-medium": choose($is-dark, dark-light-diff($highlight, $secondary, 50%, -55%), dark-light-diff($highlight, $secondary, 70%, -80%)),
+    "tertiary-or-tertiary-low": choose($is-dark, dark-light-diff($tertiary, $secondary, 85%, -65%), $tertiary),
+    "tertiary-low-or-tertiary-high": choose($is-dark, dark-light-diff($tertiary, $secondary, 20%, -25%), dark-light-diff($tertiary, $secondary, 85%, -65%)),
+    "tertiary-med-or-tertiary": choose($is-dark, $tertiary, dark-light-diff($tertiary, $secondary, 50%, -45%)),
+    "secondary-or-primary": choose($is-dark, $primary, $secondary),
+    "tertiary-or-white": choose($is-dark, #fff, $tertiary),
+    "facebook-or-white": choose($is-dark, #fff, $facebook),
+    "twitter-or-white": choose($is-dark, #fff, $twitter),
+    // code highlighting (highlight.js stackoverflow light/dark palettes)
+    "hljs-attr": choose($is-dark, #88aece, #015692),
+    "hljs-attribute": choose($is-dark, #c59bc1, #803378),
+    "hljs-addition": choose($is-dark, #76c490, #2f6f44),
+    "hljs-bg": choose($is-dark, rgb(0, 0, 0, 0.35), $primary-100),
+    "inline-code-bg": choose($is-dark, rgb(0, 0, 0, 0.35), $primary-100),
+    "hljs-comment": dark-light-diff($primary, $secondary, 60%, -40%),
+    "hljs-deletion": choose($is-dark, #de7176, #c02d2e),
+    "hljs-keyword": choose($is-dark, #88aece, #015692),
+    "hljs-title": choose($is-dark, #f08d49, #b75501),
+    "hljs-name": choose($is-dark, #f08d49, #b75501),
+    "hljs-punctuation": choose($is-dark, #ccc, #535a60),
+    "hljs-symbol": choose($is-dark, #b5bd68, #54790d),
+    "hljs-variable": choose($is-dark, #b5bd68, #54790d),
+    "hljs-string": choose($is-dark, #b5bd68, #54790d),
+    // shadow opacities (emitted as numbers, not via light-dark())
+    "shadow-opacity-modal": choose($is-dark, 1, 0.6),
+    "shadow-opacity-composer": choose($is-dark, 0.45, 0.22),
+    "shadow-opacity-menu-panel": choose($is-dark, 0.35, 0.15),
+    "shadow-opacity-card": choose($is-dark, 0.5, 0.15),
+    "shadow-opacity-dropdown": choose($is-dark, 0.25, 0.1),
+    "shadow-opacity-footer-nav": choose($is-dark, 0.4, 0.2),
+  );
+}
+
+// Discourse default (Light) scheme
+$ds-light: ds-palette(
+  $primary: #222,
+  $secondary: #fff,
+  $tertiary: #08c,
+  $quaternary: #e45735,
+  $header-background: #fff,
+  $header-primary: #333,
+  $highlight: #ffff4d,
+  $selected: #d1f0ff,
+  $hover: #f2f2f2,
+  $danger: #c80001,
+  $success: #090,
+  $love: #fa6c8d,
+  $is-dark: false
+);
+
+// Discourse built-in "Dark" scheme
+$ds-dark: ds-palette(
+  $primary: #ddd,
+  $secondary: #222,
+  $tertiary: #099dd7,
+  $quaternary: #c14924,
+  $header-background: #111,
+  $header-primary: #ddd,
+  $highlight: #a87137,
+  $selected: #052e3d,
+  $hover: #313131,
+  $danger: #e45735,
+  $success: #1ca551,
+  $love: #fa6c8d,
+  $is-dark: true
+);
+
+// Emits `light-dark(<light value>, <dark value>)` for a palette key.
+@function ds($key) {
+  @return light-dark(#{map.get($ds-light, $key)}, #{map.get($ds-dark, $key)});
+}
+
+// ---------------------------------------------------------------------------
+// CSS custom properties
+// ---------------------------------------------------------------------------
+
+:root {
+  color-scheme: light;
+
+  --scheme-type: light;
+  --primary: #{ds("primary")};
+  --secondary: #{ds("secondary")};
+  --tertiary: #{ds("tertiary")};
+  --quaternary: #{ds("quaternary")};
+  --header_background: #{ds("header_background")};
+  --header_primary: #{ds("header_primary")};
+  --highlight: #{ds("highlight")};
+  --danger: #{ds("danger")};
+  --success: #{ds("success")};
+  --love: #{ds("love")};
+  --d-selected: #{ds("selected")};
+  --d-selected-text-color: var(--primary);
+  --d-selected-hover: #{ds("selected-hover")};
+  --d-hover: #{ds("hover")};
+  --always-black-rgb: 0, 0, 0;
+  --primary-very-low: #{ds("primary-very-low")};
+  --primary-low: #{ds("primary-low")};
+  --primary-low-mid: #{ds("primary-low-mid")};
+  --primary-medium: #{ds("primary-medium")};
+  --primary-high: #{ds("primary-high")};
+  --primary-very-high: #{ds("primary-very-high")};
+  --primary-50: #{ds("primary-50")};
+  --primary-100: #{ds("primary-100")};
+  --primary-200: #{ds("primary-200")};
+  --primary-300: #{ds("primary-300")};
+  --primary-400: #{ds("primary-400")};
+  --primary-500: #{ds("primary-500")};
+  --primary-600: #{ds("primary-600")};
+  --primary-700: #{ds("primary-700")};
+  --primary-800: #{ds("primary-800")};
+  --primary-900: #{ds("primary-900")};
+  --header_primary-low: #{ds("header_primary-low")};
+  --header_primary-low-mid: #{ds("header_primary-low-mid")};
+  --header_primary-medium: #{ds("header_primary-medium")};
+  --header_primary-high: #{ds("header_primary-high")};
+  --header_primary-very-high: #{ds("header_primary-very-high")};
+  --secondary-low: #{ds("secondary-low")};
+  --secondary-medium: #{ds("secondary-medium")};
+  --secondary-high: #{ds("secondary-high")};
+  --secondary-very-high: #{ds("secondary-very-high")};
+  --tertiary-very-low: #{ds("tertiary-very-low")};
+  --tertiary-low: #{ds("tertiary-low")};
+  --tertiary-medium: #{ds("tertiary-medium")};
+  --tertiary-high: #{ds("tertiary-high")};
+  --tertiary-hover: #{ds("tertiary-hover")};
+  --tertiary-25: #{ds("tertiary-25")};
+  --tertiary-50: #{ds("tertiary-50")};
+  --tertiary-100: #{ds("tertiary-100")};
+  --tertiary-200: #{ds("tertiary-200")};
+  --tertiary-300: #{ds("tertiary-300")};
+  --tertiary-400: #{ds("tertiary-400")};
+  --tertiary-500: #{ds("tertiary-500")};
+  --tertiary-600: #{ds("tertiary-600")};
+  --tertiary-700: #{ds("tertiary-700")};
+  --tertiary-800: #{ds("tertiary-800")};
+  --tertiary-900: #{ds("tertiary-900")};
+  --quaternary-low: #{ds("quaternary-low")};
+  --highlight-bg: #{ds("highlight-bg")};
+  --highlight-low: #{ds("highlight-low")};
+  --highlight-medium: #{ds("highlight-medium")};
+  --highlight-high: #{ds("highlight-high")};
+  --danger-low: #{ds("danger-low")};
+  --danger-low-mid: #{ds("danger-low-mid")};
+  --danger-medium: #{ds("danger-medium")};
+  --danger-hover: #{ds("danger-hover")};
+  --success-very-low: #{ds("success-very-low")};
+  --success-low: #{ds("success-low")};
+  --success-medium: #{ds("success-medium")};
+  --success-hover: #{ds("success-hover")};
+  --love-low: #{ds("love-low")};
+  --wiki: #{$wiki};
+  --blend-primary-secondary-5: #{ds("blend-primary-secondary-5")};
+  --primary-med-or-secondary-med: #{ds("primary-med-or-secondary-med")};
+  --primary-med-or-secondary-high: #{ds("primary-med-or-secondary-high")};
+  --primary-high-or-secondary-low: #{ds("primary-high-or-secondary-low")};
+  --primary-low-mid-or-secondary-high: #{ds("primary-low-mid-or-secondary-high")};
+  --primary-low-mid-or-secondary-low: #{ds("primary-low-mid-or-secondary-low")};
+  --primary-or-primary-low-mid: #{ds("primary-or-primary-low-mid")};
+  --highlight-low-or-medium: #{ds("highlight-low-or-medium")};
+  --tertiary-or-tertiary-low: #{ds("tertiary-or-tertiary-low")};
+  --tertiary-low-or-tertiary-high: #{ds("tertiary-low-or-tertiary-high")};
+  --tertiary-med-or-tertiary: #{ds("tertiary-med-or-tertiary")};
+  --secondary-or-primary: #{ds("secondary-or-primary")};
+  --tertiary-or-white: #{ds("tertiary-or-white")};
+  --facebook-or-white: #{ds("facebook-or-white")};
+  --twitter-or-white: #{ds("twitter-or-white")};
+  --hljs-attr: #{ds("hljs-attr")};
+  --hljs-attribute: #{ds("hljs-attribute")};
+  --hljs-addition: #{ds("hljs-addition")};
+  --hljs-bg: #{ds("hljs-bg")};
+  --inline-code-bg: #{ds("inline-code-bg")};
+  --hljs-comment: #{ds("hljs-comment")};
+  --hljs-deletion: #{ds("hljs-deletion")};
+  --hljs-keyword: #{ds("hljs-keyword")};
+  --hljs-title: #{ds("hljs-title")};
+  --hljs-name: #{ds("hljs-name")};
+  --hljs-punctuation: #{ds("hljs-punctuation")};
+  --hljs-symbol: #{ds("hljs-symbol")};
+  --hljs-variable: #{ds("hljs-variable")};
+  --hljs-string: #{ds("hljs-string")};
+  --google: #{$google};
+  --google-hover: #{$google-hover};
+  --instagram: #{$instagram};
+  --instagram-hover: #{$instagram-hover};
+  --facebook: #{$facebook};
+  --facebook-hover: #{$facebook-hover};
+  --cas: #{$cas};
+  --twitter: #{$twitter};
+  --github: #{$github};
+  --github-hover: #{$github-hover};
+  --discord: #{$discord};
+  --discord-hover: #{$discord-hover};
+  // Discourse's d-button tokens, needed by the discourse_id vars below
+  --d-button-primary-text-color: #fff;
+  --d-button-primary-text-color--hover: #fff;
+  --d-button-primary-bg-color: var(--tertiary);
+  --d-button-primary-bg-color--hover: var(--tertiary-hover);
+  --d-button-primary-icon-color: #fff;
+  --d-button-primary-icon-color--hover: #fff;
+  --d-button-border: #{ds("primary-400")};
+  --discourse_id-text: var(--d-button-primary-text-color);
+  --discourse_id-text-hover: var(--d-button-primary-text-color--hover);
+  --discourse_id-background: var(--d-button-primary-bg-color);
+  --discourse_id-background-hover: var(--d-button-primary-bg-color--hover);
+  --discourse_id-icon: var(--d-button-primary-icon-color);
+  --discourse_id-icon-hover: var(--d-button-primary-icon-color--hover);
+  --discourse_id-border: var(--d-button-border);
+  --gold: #{$gold};
+  --silver: #{$silver};
+  --bronze: #{$bronze};
+  --d-link-color: var(--tertiary);
+  --title-color--read: var(--primary-medium);
+  --content-border-color: var(--primary-low);
+  --input-border-color: var(--primary-400);
+  --table-border-color: var(--content-border-color);
+  --metadata-color: var(--primary-medium);
+  --d-badge-card-background-color: var(--secondary);
+  --mention-background-color: var(--primary-low);
+  --title-color: var(--primary);
+  --title-color--header: var(--header_primary);
+  --excerpt-color: var(--primary-high);
+  --shadow-modal: 0 8px 60px rgba(0, 0, 0, var(--shadow-opacity-modal));
+  --shadow-composer: 0 -1px 40px rgba(0, 0, 0, var(--shadow-opacity-composer));
+  --shadow-card: 0 4px 14px rgba(0, 0, 0, var(--shadow-opacity-card));
+  --shadow-dropdown: 0 2px 12px 0 rgba(0, 0, 0, var(--shadow-opacity-dropdown));
+  --shadow-menu-panel: var(--shadow-dropdown);
+  --shadow-header: 0 0 0 1px var(--content-border-color);
+  --shadow-footer-nav: 0 0 2px 0 rgba(0, 0, 0, var(--shadow-opacity-footer-nav));
+  --shadow-focus-danger: 0 0 6px 0 var(--danger);
+  --shadow-docked-composer: 0 4px 30px rgb(0, 0, 0, 0.15);
+  --float-kit-arrow-stroke-color: var(--primary-low);
+  --float-kit-arrow-fill-color: var(--secondary);
+  --topic-timeline-border-color: #{ds("tertiary-low-or-tertiary-high")};
+  --topic-timeline-handle-color: light-dark(var(--tertiary-400),
+          var(--tertiary));
+}
+
+// Non-color values that can't use light-dark(): RGB triplets (for rgba(var(--x-rgb)))
+// and shadow opacities. These flip together with the .dark class, which also flips
+// color-scheme, so they stay in sync with the light-dark() pairs above.
+// (:root comes first so that .dark, at equal specificity, wins when both apply.)
+:root {
+  --primary-rgb: #{hexToRGB(map.get($ds-light, "primary"))};
+  --primary-low-rgb: #{hexToRGB(map.get($ds-light, "primary-low"))};
+  --primary-very-low-rgb: #{hexToRGB(map.get($ds-light, "primary-very-low"))};
+  --secondary-rgb: #{hexToRGB(map.get($ds-light, "secondary"))};
+  --header_background-rgb: #{hexToRGB(map.get($ds-light, "header_background"))};
+  --tertiary-rgb: #{hexToRGB(map.get($ds-light, "tertiary"))};
+  --highlight-rgb: #{hexToRGB(map.get($ds-light, "highlight"))};
+  --success-rgb: #{hexToRGB(map.get($ds-light, "success"))};
+  --shadow-opacity-modal: #{map.get($ds-light, "shadow-opacity-modal")};
+  --shadow-opacity-composer: #{map.get($ds-light, "shadow-opacity-composer")};
+  --shadow-opacity-menu-panel: #{map.get($ds-light, "shadow-opacity-menu-panel")};
+  --shadow-opacity-card: #{map.get($ds-light, "shadow-opacity-card")};
+  --shadow-opacity-dropdown: #{map.get($ds-light, "shadow-opacity-dropdown")};
+  --shadow-opacity-footer-nav: #{map.get($ds-light, "shadow-opacity-footer-nav")};
+}
+
+.dark {
+  --scheme-type: dark;
+  --primary-rgb: #{hexToRGB(map.get($ds-dark, "primary"))};
+  --primary-low-rgb: #{hexToRGB(map.get($ds-dark, "primary-low"))};
+  --primary-very-low-rgb: #{hexToRGB(map.get($ds-dark, "primary-very-low"))};
+  --secondary-rgb: #{hexToRGB(map.get($ds-dark, "secondary"))};
+  --header_background-rgb: #{hexToRGB(map.get($ds-dark, "header_background"))};
+  --tertiary-rgb: #{hexToRGB(map.get($ds-dark, "tertiary"))};
+  --highlight-rgb: #{hexToRGB(map.get($ds-dark, "highlight"))};
+  --success-rgb: #{hexToRGB(map.get($ds-dark, "success"))};
+  --shadow-opacity-modal: #{map.get($ds-dark, "shadow-opacity-modal")};
+  --shadow-opacity-composer: #{map.get($ds-dark, "shadow-opacity-composer")};
+  --shadow-opacity-menu-panel: #{map.get($ds-dark, "shadow-opacity-menu-panel")};
+  --shadow-opacity-card: #{map.get($ds-dark, "shadow-opacity-card")};
+  --shadow-opacity-dropdown: #{map.get($ds-dark, "shadow-opacity-dropdown")};
+  --shadow-opacity-footer-nav: #{map.get($ds-dark, "shadow-opacity-footer-nav")};
+}

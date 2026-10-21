@@ -37,7 +37,7 @@ export function StartDmForm() {
 export function SendDmForm({ toId }: { toId: number }) {
   const [state, formAction] = useActionState<ActionState, FormData>(sendDmAction, null);
   return (
-    <form action={formAction} className="border-t border-line p-4">
+    <form action={formAction} className="border-t-[1.5px] border-line p-4">
       <input type="hidden" name="to_id" value={toId} />
       <Alert state={state} />
       <div className="flex items-end gap-2">

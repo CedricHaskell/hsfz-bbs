@@ -161,7 +161,7 @@ export function NewThreadForm({
                 type="button"
                 title={t.title}
                 onClick={() => applyFormat(t.cmd)}
-                className="rounded border border-line px-2 py-0.5 text-xs font-semibold text-muted hover:bg-soft hover:text-ink"
+                className="rounded border-[1.5px] border-line px-2 py-0.5 text-xs font-semibold text-muted hover:bg-soft hover:text-ink"
               >
                 {t.label}
               </button>
@@ -195,8 +195,8 @@ export function NewThreadForm({
         </p>
       </div>
       {isConfession && (
-        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-line bg-soft/60 px-3 py-2.5 text-sm">
-          <input type="checkbox" name="anonymous" className="h-4 w-4 accent-[#0e7490]" />
+        <label className="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-line bg-soft/60 px-3 py-2.5 text-sm">
+          <input type="checkbox" name="anonymous" className="h-4 w-4 accent-[var(--tertiary)]" />
           <span>
             匿名发表
             <span className="ml-1 text-xs text-muted">（展示为「匿名同学」；管理员仍可查看作者以维护秩序）</span>
