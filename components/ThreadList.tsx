@@ -26,7 +26,7 @@ export function ThreadList({
     );
   }
   return (
-    <div className="divide-y divide-line">
+    <div className="divide-y-[1.5px] divide-line">
       {threads.map((t) => (
         <ThreadRowItem key={t.id} t={t} showBoard={showBoard} />
       ))}
@@ -52,7 +52,7 @@ export function ThreadRowItem({
         )}
         <Link
           href={`/t/${t.id}`}
-          className="truncate font-medium text-ink hover:text-brand hover:underline"
+          className="min-w-0 truncate font-medium text-ink hover:text-brand hover:underline"
         >
           {t.title}
         </Link>

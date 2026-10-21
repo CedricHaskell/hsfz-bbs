@@ -10,9 +10,10 @@ export function GuestRequestForm() {
     null
   );
   return (
-    <form action={formAction} className="space-y-2.5">
+    <form action={formAction} aria-label="登录求助" className="space-y-2.5">
       {state && (
         <div
+          role={state.ok ? "status" : "alert"}
           className={`rounded-md border px-3 py-2 text-sm ${
             state.ok
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
@@ -23,11 +24,12 @@ export function GuestRequestForm() {
         </div>
       )}
       <div className="grid gap-2 sm:grid-cols-2">
-        <input name="username" maxLength={30} className="input" placeholder="你的用户名（选填）" />
-        <input name="contact" required maxLength={60} className="input" placeholder="联系方式：QQ / 微信号 *" />
+        <input name="username" aria-label="用户名（选填）" autoComplete="username" maxLength={30} className="input" placeholder="你的用户名（选填）" />
+        <input name="contact" aria-label="联系方式" required maxLength={60} className="input" placeholder="联系方式：QQ / 微信号 *" />
       </div>
       <textarea
         name="detail"
+        aria-label="问题描述"
         required
         maxLength={300}
         rows={3}

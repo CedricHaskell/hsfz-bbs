@@ -3,18 +3,22 @@ import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fmtDate } from "./format";
+import { decryptPhone, encryptPhone } from "./crypto";
 
 const DATA_DIR = process.env.HSFZ_DATA_DIR || path.join(process.cwd(), "data");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
+const ATTACHMENT_DIR = path.join(DATA_DIR, "attachments");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-export { UPLOAD_DIR };
+fs.mkdirSync(ATTACHMENT_DIR, { recursive: true, mode: 0o700 });
+export { UPLOAD_DIR, ATTACHMENT_DIR };
 
 const g = globalThis as unknown as { __bbsDb?: Database.Database };
 export const db = g.__bbsDb ?? new Database(path.join(DATA_DIR, "bbs.db"));
 g.__bbsDb = db;
 
 db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 5000");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
@@ -153,49 +157,124 @@ CREATE TABLE IF NOT EXISTS whitelist (
   used_by INTEGER DEFAULT 0,
   created_at TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER DEFAULT 0,
+  window_start INTEGER DEFAULT 0,
+  expires_at INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS attachment_blobs (
+  hash TEXT PRIMARY KEY,
+  encoding TEXT NOT NULL CHECK (encoding IN ('raw', 'gzip')),
+  raw_size INTEGER NOT NULL CHECK (raw_size > 0),
+  stored_size INTEGER NOT NULL CHECK (stored_size > 0 AND stored_size = length(bytes)),
+  bytes BLOB NOT NULL
+);
+CREATE TABLE IF NOT EXISTS attachments (
+  id TEXT PRIMARY KEY,
+  blob_hash TEXT NOT NULL REFERENCES attachment_blobs(hash),
+  user_id INTEGER NOT NULL,
+  thread_id INTEGER NOT NULL,
+  reply_id INTEGER NOT NULL DEFAULT 0,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('pdf', 'md', 'html'))
+);
+CREATE INDEX IF NOT EXISTS attachments_thread ON attachments(thread_id, reply_id);
+CREATE INDEX IF NOT EXISTS attachments_user ON attachments(user_id);
+CREATE INDEX IF NOT EXISTS attachments_blob ON attachments(blob_hash);
+CREATE TRIGGER IF NOT EXISTS attachments_cleanup_blob AFTER DELETE ON attachments
+BEGIN
+  DELETE FROM attachment_blobs WHERE hash = OLD.blob_hash
+    AND NOT EXISTS (SELECT 1 FROM attachments WHERE blob_hash = OLD.blob_hash);
+END;
+CREATE TRIGGER IF NOT EXISTS attachments_cleanup_reply AFTER DELETE ON replies
+BEGIN
+  DELETE FROM attachments WHERE reply_id = OLD.id;
+END;
+CREATE TRIGGER IF NOT EXISTS attachments_cleanup_thread AFTER DELETE ON threads
+BEGIN
+  DELETE FROM attachments WHERE thread_id = OLD.id;
+END;
+CREATE TABLE IF NOT EXISTS attachment_objects (
+  hash TEXT PRIMARY KEY,
+  encoding TEXT NOT NULL CHECK (encoding IN ('raw', 'gzip')),
+  raw_size INTEGER NOT NULL CHECK (raw_size > 0),
+  stored_size INTEGER NOT NULL CHECK (stored_size > 0)
+);
+CREATE TABLE IF NOT EXISTS attachment_files (
+  id TEXT PRIMARY KEY,
+  object_hash TEXT NOT NULL REFERENCES attachment_objects(hash),
+  user_id INTEGER NOT NULL,
+  thread_id INTEGER NOT NULL,
+  reply_id INTEGER NOT NULL DEFAULT 0,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('pdf', 'file'))
+);
+CREATE INDEX IF NOT EXISTS attachment_files_thread ON attachment_files(thread_id, reply_id);
+CREATE INDEX IF NOT EXISTS attachment_files_user ON attachment_files(user_id);
+CREATE INDEX IF NOT EXISTS attachment_files_object ON attachment_files(object_hash);
+CREATE TRIGGER IF NOT EXISTS attachment_files_cleanup_reply AFTER DELETE ON replies
+BEGIN
+  DELETE FROM attachment_files WHERE reply_id = OLD.id;
+END;
+CREATE TRIGGER IF NOT EXISTS attachment_files_cleanup_thread AFTER DELETE ON threads
+BEGIN
+  DELETE FROM attachment_files WHERE thread_id = OLD.id;
+END;
 `);
 
-// 早期数据库无 grade 列，补一次迁移
-try {
-  db.exec("ALTER TABLE users ADD COLUMN grade TEXT DEFAULT ''");
-} catch {
-  /* 列已存在则忽略 */
+// SQLite serializes migration checks and DDL so concurrent workers can start safely.
+function ensureColumn(table: string, name: string, definition: string) {
+  db.transaction(() => {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!columns.some((c) => c.name === name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+  }).immediate();
 }
-try {
-  db.exec("ALTER TABLE boards ADD COLUMN grade_lock TEXT DEFAULT ''");
-} catch {
-  /* 列已存在则忽略 */
+for (const [table, column, definition] of [
+  ["users", "grade", "TEXT DEFAULT ''"], ["boards", "grade_lock", "TEXT DEFAULT ''"],
+  ["threads", "images", "TEXT DEFAULT ''"], ["threads", "anonymous", "INTEGER DEFAULT 0"],
+  ["replies", "images", "TEXT DEFAULT ''"], ["replies", "reply_to", "INTEGER DEFAULT 0"],
+  ["users", "phone", "TEXT DEFAULT ''"], ["users", "email", "TEXT DEFAULT ''"],
+  ["users", "real_name", "TEXT NOT NULL DEFAULT ''"], ["users", "student_id", "TEXT NOT NULL DEFAULT ''"],
+  ["threads", "like_count", "INTEGER DEFAULT 0"], ["rate_limits", "expires_at", "INTEGER DEFAULT 0"],
+]) ensureColumn(table, column, definition);
+if (!db.prepare("SELECT value FROM settings WHERE key = 'like_count_backfilled'").get()) {
+  db.exec(
+    "UPDATE threads SET like_count = (SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = threads.id)"
+  );
+  db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('like_count_backfilled', '1')").run();
 }
-try {
-  db.exec("ALTER TABLE threads ADD COLUMN images TEXT DEFAULT ''");
-} catch {
-  /* 列已存在则忽略 */
-}
-try {
-  db.exec("ALTER TABLE threads ADD COLUMN anonymous INTEGER DEFAULT 0");
-} catch {
-  /* 列已存在则忽略 */
-}
-try {
-  db.exec("ALTER TABLE replies ADD COLUMN images TEXT DEFAULT ''");
-} catch {
-  /* 列已存在则忽略 */
-}
-try {
-  db.exec("ALTER TABLE replies ADD COLUMN reply_to INTEGER DEFAULT 0");
-} catch {
-  /* 列已存在则忽略 */
-}
-try {
-  db.exec("ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''");
-} catch {
-  /* 列已存在则忽略 */
-}
-try {
-  db.exec("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''");
-} catch {
-  /* 列已存在则忽略 */
-}
+
+// Legacy local-time timestamps cannot provide a reliable absolute expiry.
+db.transaction(() => {
+  const columns = db.prepare("PRAGMA table_info(sessions)").all() as { name: string }[];
+  if (!columns.some((c) => c.name === "expires_at")) {
+    db.exec("ALTER TABLE sessions ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0");
+    db.exec("DELETE FROM sessions");
+  }
+}).immediate();
+db.exec(`
+  CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
+  CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS rate_limits_expiry ON rate_limits(expires_at);
+  CREATE INDEX IF NOT EXISTS threads_board_created ON threads(board_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS threads_author ON threads(author_id);
+  CREATE INDEX IF NOT EXISTS replies_thread_created ON replies(thread_id, created_at, id);
+  CREATE INDEX IF NOT EXISTS replies_author ON replies(author_id);
+  CREATE INDEX IF NOT EXISTS notifications_recipient ON notifications(user_id, is_read, id);
+  CREATE INDEX IF NOT EXISTS notifications_dedupe ON notifications(user_id, actor_id, type, thread_id, created_at);
+  CREATE INDEX IF NOT EXISTS likes_thread ON thread_likes(thread_id);
+`);
+// Encrypt legacy plaintext phones transactionally; never modify encrypted values.
+db.transaction(() => {
+  const encrypted = db.prepare("SELECT phone FROM users WHERE phone LIKE 'enc:%'").all() as { phone: string }[];
+  if (encrypted.some((row) => !decryptPhone(row.phone))) {
+    throw new Error("已有手机号密文无法解密。请检查 HSFZ_ENCRYPT_KEY；本次手机号迁移未写入任何数据。需要换钥时请先对备份使用 phone-key:rotate。");
+  }
+  const phones = db.prepare("SELECT id, phone FROM users WHERE phone != '' AND phone NOT LIKE 'enc:%'").all() as { id: number; phone: string }[];
+  const update = db.prepare("UPDATE users SET phone = ? WHERE id = ?");
+  for (const row of phones) update.run(encryptPhone(row.phone), row.id);
+}).immediate();
 
 /* 后补板块迁移：年级群（仅本年级同学可发言）+ 考试交流 */
 function ensureGradeBoards() {
@@ -210,33 +289,26 @@ function ensureGradeBoards() {
     ["biye", "毕业生专区", "毕业不离散：大学职场见闻、返校聚会、老友重逢", "🎒", 24, "已毕业"],
   ];
   const ins = db.prepare(
-    `INSERT INTO boards (slug, name, description, icon, category, sort, grade_lock)
+    `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort, grade_lock)
      VALUES (?, ?, ?, ?, '年级群', ?, ?)`
   );
   for (const [slug, name, desc, icon, sort, lock] of groups) {
-    if (db.prepare("SELECT id FROM boards WHERE slug = ?").get(slug)) continue;
     ins.run(slug, name, desc, icon, sort, lock);
   }
   // 学习成长：考试交流、文学创作
-  if (!db.prepare("SELECT id FROM boards WHERE slug = ?").get("exams")) {
-    db.prepare(
-      `INSERT INTO boards (slug, name, description, icon, category, sort)
-       VALUES ('exams', '考试交流', '期中期末、周测月考的备考经验、题目讨论与考后吐槽', '📝', '学习成长', 15)`
-    ).run();
-  }
-  if (!db.prepare("SELECT id FROM boards WHERE slug = ?").get("literature")) {
-    db.prepare(
-      `INSERT INTO boards (slug, name, description, icon, category, sort)
-       VALUES ('literature', '文学创作', '散文、诗歌、小说——写下属于你的故事', '✍️', '学习成长', 16)`
-    ).run();
-  }
+  db.prepare(
+    `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort)
+     VALUES ('exams', '考试交流', '期中期末、周测月考的备考经验、题目讨论与考后吐槽', '📝', '学习成长', 15)`
+  ).run();
+  db.prepare(
+    `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort)
+     VALUES ('literature', '文学创作', '散文、诗歌、小说——写下属于你的故事', '✍️', '学习成长', 16)`
+  ).run();
   // 游戏分区：游戏讨论
-  if (!db.prepare("SELECT id FROM boards WHERE slug = ?").get("games")) {
-    db.prepare(
-      `INSERT INTO boards (slug, name, description, icon, category, sort)
-       VALUES ('games', '游戏讨论', '聊你喜欢的游戏，组队开黑、攻略交流', '🎮', '游戏', 58)`
-    ).run();
-  }
+  db.prepare(
+    `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort)
+     VALUES ('games', '游戏讨论', '聊你喜欢的游戏，组队开黑、攻略交流', '🎮', '游戏', 58)`
+  ).run();
 }
 
 /* 后补板块迁移：球友分类（老数据库没有则插入，并各送一条示例帖） */
@@ -253,20 +325,20 @@ function ensureSportsBoards() {
     ["pickleball", "匹克球", "新兴网红球类，一起来玩", "🥒", 59, "wang2028", "匹克球新手局：周日体育馆侧厅"],
   ];
   const insBoard = db.prepare(
-    "INSERT INTO boards (slug, name, description, icon, category, sort) VALUES (?, ?, ?, ?, '球友', ?)"
+    "INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort) VALUES (?, ?, ?, ?, '球友', ?)"
   );
   const insThread = db.prepare(
     `INSERT INTO threads (board_id, author_id, title, content, views, created_at, last_reply_at)
      VALUES (?, ?, ?, ?, ?, datetime('now','localtime','-1 day'), datetime('now','localtime','-1 day'))`
   );
   for (const [slug, name, desc, icon, sort, author, title] of sports) {
-    if (db.prepare("SELECT id FROM boards WHERE slug = ?").get(slug)) continue;
     const boardInfo = insBoard.run(slug, name, desc, icon, sort);
+    if (boardInfo.changes === 0) continue;
     const bid = Number(boardInfo.lastInsertRowid);
     const uidRow = db.prepare("SELECT id FROM users WHERE username = ?").get(author) as
       | { id: number }
       | undefined;
-    if (!uidRow) continue;
+    if (!uidRow || process.env.HSFZ_SEED_DEMO !== "1" || process.env.NODE_ENV === "production") continue;
     insThread.run(
       bid,
       uidRow.id,
@@ -293,7 +365,16 @@ function after(dateStr: string, hours: number): string {
 }
 
 function seed() {
-  if ((db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c > 0) return;
+  if (process.env.HSFZ_SEED_DEMO !== "1" || process.env.NODE_ENV === "production") return;
+  const existing = (db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
+  if (existing > 0) {
+    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('seeded', '1')").run();
+    return;
+  }
+  const mark = db
+    .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('seeded', '1')")
+    .run();
+  if (mark.changes === 0) return;
 
   /* 用户 */
   const users: Array<[string, string, string, string, string, string, string, string, string]> = [
@@ -654,7 +735,6 @@ function seed() {
   const insWater = db.transaction(() => {
     for (const { id, add } of need) {
       for (let k = 0; k < add; k++) {
-        const at = ts(0, 0); // 占位
         const minutesAgo = spread - ((idx + 1) * spread) / (totalNeed + 1);
         const t = new Date(NOW - minutesAgo * 60000);
         insReply.run(waterId, id, waterMsgs[idx % waterMsgs.length], fmtDate(t));
@@ -701,18 +781,36 @@ function seed() {
   insTMsg.run(Number(t1.lastInsertRowid), uid["admin"], 1, "感谢建议！已列入开发计划，预计下个版本上线，届时会在站务公告通知大家。", after(ts(2, 800), 24));
   const t2 = insTicket.run(uid["wang2028"], "title_request", "头衔申请：篮球社新人王", "open", "", ts(1, 780), ts(1, 780));
   insTMsg.run(Number(t2.lastInsertRowid), uid["wang2028"], 0, "管理员好！我是高一的阿旺，刚加入篮球社，想申请一个「篮球社新人王」头衔，给社团招新撑撑场面~", ts(1, 780));
+  db.exec("UPDATE threads SET like_count = (SELECT COUNT(*) FROM thread_likes WHERE thread_id = threads.id)");
 }
 
+// Base boards are required for empty production databases as well as demo data.
+function ensureBaseBoards() {
+  const boards = [
+    ["study", "学习互助", "学科问答、资料分享、组队自习", "📚", "学习成长", 10],
+    ["competition", "竞赛升学", "竞赛与升学经验", "🏆", "学习成长", 20],
+    ["food", "美食推荐", "食堂与周边美食", "🍜", "生活娱乐", 30],
+    ["clubs", "社团活动", "社团招新与活动", "🎭", "生活娱乐", 40],
+    ["chat", "校园闲聊", "日常交流", "💬", "生活娱乐", 50],
+    ["market", "跳蚤市场", "二手物品交易", "🛒", "交易互助", 60],
+    ["lostfound", "失物招领", "失物与招领", "🧳", "交易互助", 70],
+    ["memories", "校园回忆", "老照片与老故事", "🏫", "情感联结", 80],
+    ["alumni", "校友交流", "校友动态", "🎓", "情感联结", 90],
+    ["announcements", "站务公告", "社区公约与通知（仅管理员可发）", "📢", "官方", 100],
+  ];
+  const insert = db.prepare("INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort) VALUES (?, ?, ?, ?, ?, ?)");
+  for (const board of boards) insert.run(...board);
+}
 seed();
+ensureBaseBoards();
 ensureSportsBoards();
 ensureGradeBoards();
 ensureConfessionBoard();
 
 /* 后补板块迁移：表白墙（支持匿名） */
 function ensureConfessionBoard() {
-  if (db.prepare("SELECT id FROM boards WHERE slug = ?").get("confession")) return;
   db.prepare(
-    `INSERT INTO boards (slug, name, description, icon, category, sort)
+    `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort)
      VALUES ('confession', '表白墙', '大胆说出你的心意，支持匿名发表', '💌', '情感联结', 85)`
   ).run();
 }

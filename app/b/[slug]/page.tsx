@@ -19,7 +19,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
   const threads = boardThreads(board.id);
   const user = await getCurrentUser();
   const canPost =
-    !board.grade_lock || user?.role === "admin" || user?.grade === board.grade_lock;
+    user?.role === "admin" || (board.slug !== "announcements" && (!board.grade_lock || user?.grade === board.grade_lock));
 
   return (
     <div className="space-y-4">
@@ -45,10 +45,10 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
             ) : (
               <span className="shrink-0 text-xs text-muted">
                 你当前是{user.grade || "未填写年级"}，仅可浏览；可在
-                <Link href="/settings" className="link">
-                  账号设置
+                <Link href="/messages" className="link">
+                  我的消息
                 </Link>
-                中确认年级
+                发工单申请更正年级
               </span>
             )
           ) : (

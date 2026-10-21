@@ -29,14 +29,15 @@ export function fmtNum(n: number): string {
   return String(n);
 }
 
+// 字母头像配色（Discourse 色板：tertiary/quaternary/success/love/danger/highlight + 灰）
 const AVATAR_COLORS = [
-  "bg-[#1a7f37]",
-  "bg-[#0969da]",
-  "bg-[#8250df]",
-  "bg-[#bf3989]",
-  "bg-[#bc4c00]",
-  "bg-[#0e7490]",
-  "bg-[#57606a]",
+  "bg-[#0088cc]",
+  "bg-[#e45735]",
+  "bg-[#009900]",
+  "bg-[#fa6c8d]",
+  "bg-[#c80001]",
+  "bg-[#a87137]",
+  "bg-[#535a60]",
 ];
 
 export function avatarColor(name: string): string {
