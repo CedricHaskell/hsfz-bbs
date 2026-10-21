@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import crypto from "node:crypto";
 import { db, type UserRow } from "./db";
+import { SESSION_TTL_SECONDS, sessionUserByToken } from "./session";
 
 const COOKIE = "hsfz_session";
 
@@ -14,18 +15,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
-  const row = db
-    .prepare(
-      `SELECT u.id, u.username, u.nickname, u.avatar, u.role, u.status, u.banned, u.custom_title, u.grade
-       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`
-    )
-    .get(token) as SessionUser | undefined;
-  if (!row) return null;
-  // 待审核 / 被驳回 / 被封禁的会话一律踢出
-  if (row.banned || row.status !== "approved") {
-    db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
-    return null;
-  }
+  const row = sessionUserByToken(token);
   return row;
 }
 
@@ -43,18 +33,18 @@ export async function requireAdmin(): Promise<SessionUser> {
 
 export async function createSession(userId: number): Promise<void> {
   const token = crypto.randomBytes(32).toString("hex");
-  db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, datetime('now','localtime'))").run(
-    token,
-    userId
+  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
+  db.prepare("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, datetime('now','localtime'), ?)").run(
+    token, userId, Date.now() + SESSION_TTL_SECONDS * 1000
   );
   const store = await cookies();
   store.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-    // 上线 HTTPS 后在服务端设置环境变量 HSFZ_COOKIE_SECURE=1 开启
-    secure: process.env.HSFZ_COOKIE_SECURE === "1",
+    maxAge: SESSION_TTL_SECONDS,
+    // Production defaults to HTTPS; explicit 0 supports isolated HTTP deployments.
+    secure: process.env.HSFZ_COOKIE_SECURE !== "0" && (process.env.NODE_ENV === "production" || process.env.HSFZ_COOKIE_SECURE === "1"),
   });
 }
 

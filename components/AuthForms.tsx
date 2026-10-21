@@ -71,7 +71,7 @@ export function RegisterForm() {
           minLength={2}
           maxLength={20}
           className="input"
-          placeholder="与学籍一致的姓名（昵称默认用它，登录后可改）"
+          placeholder="与学籍一致的姓名（仅供管理员审核）"
         />
       </div>
       <div>
@@ -99,7 +99,7 @@ export function RegisterForm() {
           pattern="1[3-9][0-9]{9}"
           maxLength={11}
           className="input"
-          placeholder="11 位手机号（用于找回密码）"
+          placeholder="11 位手机号"
           title="11 位手机号"
         />
       </div>
@@ -111,16 +111,16 @@ export function RegisterForm() {
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">密码</label>
-        <input name="password" type="password" required minLength={6} className="input" placeholder="至少 6 位" />
+        <input name="password" type="password" required minLength={8} className="input" placeholder="至少 8 位" />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">确认密码</label>
-        <input name="password2" type="password" required minLength={6} className="input" placeholder="再输入一次" />
+        <input name="password2" type="password" required minLength={8} className="input" placeholder="再输入一次" />
       </div>
       <p className="rounded-md bg-soft/60 px-3 py-2 text-xs leading-5 text-muted">
-        🔒 隐私说明：姓名、学号、手机号仅用于身份核验与找回密码，保存在论坛数据库中；密码经
+        🔒 隐私说明：姓名、学号、手机号仅供管理员审核身份与处理账号申诉，保存在论坛数据库中；密码经
         bcrypt 单向加密，任何人（包括管理员）都无法查看原文；上传图片会自动剥离 EXIF/GPS
-        定位信息。昵称默认为真实姓名，登录后可在「账号设置」修改。
+        定位信息。昵称默认为用户名，登录后可在「账号设置」修改。
       </p>
       <SubmitButton className="btn-primary w-full justify-center" pendingText="提交中…">
         提交注册申请

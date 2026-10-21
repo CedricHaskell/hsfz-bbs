@@ -8,14 +8,16 @@ export function SubmitButton({
   children,
   className = "btn-primary",
   pendingText = "处理中…",
+  disabled = false,
 }: {
   children: React.ReactNode;
   className?: string;
   pendingText?: string;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}>
+    <button type="submit" disabled={pending || disabled} className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}>
       {pending ? pendingText : children}
     </button>
   );
@@ -50,7 +52,9 @@ export function ConfirmSubmit({
       type="button"
       title={message}
       className={className}
-      onClick={() => {
+      onClick={(event) => {
+        // React may reuse this node as the submit button before the click's default action.
+        event.preventDefault();
         setArmed(true);
         timer.current = setTimeout(() => setArmed(false), 3000);
       }}

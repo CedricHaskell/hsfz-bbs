@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import Link from "next/link";
 import { allBoards } from "@/lib/queries";
 import { NewThreadForm } from "@/components/NewThreadForm";
 
@@ -11,7 +12,7 @@ export default async function NewThreadPage({
 }) {
   const user = await requireUser();
   const { board } = await searchParams;
-  const boards = allBoards();
+  const boards = allBoards().filter((b) => user.role === "admin" || (!b.grade_lock || b.grade_lock === user.grade));
   const def = board ? boards.find((b) => b.slug === board) : undefined;
 
   return (
@@ -20,9 +21,9 @@ export default async function NewThreadPage({
       <div className="card">
         <div className="card-header">
           新主题 · 发帖前请阅读{" "}
-          <a href="/b/announcements" className="link">
+          <Link href="/b/announcements" className="link">
             社区公约
-          </a>
+          </Link>
         </div>
         <NewThreadForm boards={boards} defaultBoardId={def?.id} isAdmin={user.role === "admin"} />
       </div>

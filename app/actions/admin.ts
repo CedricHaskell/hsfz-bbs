@@ -12,13 +12,13 @@ export async function adminResetPasswordAction(
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   if (!username) return fail("请输入用户名");
-  if (password.length < 8) return fail("临时密码至少 8 位，重置后请通知对方尽快修改");
+  if (password.length < 8 || Buffer.byteLength(password, "utf8") > 72) return fail("临时密码至少 8 位，重置后请通知对方尽快修改");
   const row = db.prepare("SELECT id FROM users WHERE username = ?").get(username) as
     | { id: number }
     | undefined;
   if (!row) return fail("用户不存在");
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(
-    bcrypt.hashSync(password, 10),
+    await bcrypt.hash(password, 10),
     row.id
   );
   destroyUserSessions(row.id);
@@ -28,12 +28,12 @@ export async function adminResetPasswordAction(
 
 
 import fs from "node:fs";
-import crypto from "node:crypto";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
-import { db, setSetting, getSetting, UPLOAD_DIR } from "@/lib/db";
-import { removeUploadFile } from "@/lib/upload";
+import { db, setSetting, getSetting, UPLOAD_DIR, GRADES } from "@/lib/db";
+import { saveUploadImage, removeUploadFile } from "@/lib/upload";
 import { requireAdmin, destroyUserSessions } from "@/lib/auth";
+import { attachmentTransaction, deleteThreadAttachments } from "@/lib/attachments";
 import type { ActionState } from "./auth";
 
 const fail = (message: string): ActionState => ({ message, ok: false });
@@ -43,7 +43,12 @@ export async function approveUserAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const userId = Number(formData.get("user_id"));
   if (!userId) return;
-  db.prepare("UPDATE users SET status = 'approved', reject_reason = '' WHERE id = ?").run(userId);
+  db.transaction(() => {
+    const user = db.prepare("SELECT real_name, student_id FROM users WHERE id = ?").get(userId) as { real_name: string; student_id: string } | undefined;
+    if (!user) return;
+    db.prepare("UPDATE whitelist SET used_by = ? WHERE real_name = ? AND student_id = ? AND used_by = 0").run(userId, user.real_name, user.student_id);
+    db.prepare("UPDATE users SET status = 'approved', reject_reason = '' WHERE id = ?").run(userId);
+  }).immediate();
   revalidatePath("/", "layout");
 }
 
@@ -107,28 +112,27 @@ export async function deleteThreadAction(formData: FormData): Promise<void> {
   const row = db.prepare("SELECT images FROM threads WHERE id = ?").get(threadId) as
     | { images: string }
     | undefined;
-  if (row?.images) {
-    try {
-      (JSON.parse(row.images) as string[]).forEach((u) => removeUploadFile(u));
-    } catch {
-      /* 图片路径解析失败则跳过清理 */
-    }
-  }
-  // 清理回复中的图片
-  const replyImgRows = db
-    .prepare("SELECT images FROM replies WHERE thread_id = ? AND images != ''")
-    .all(threadId) as { images: string }[];
-  replyImgRows.forEach((r) => {
-    try {
-      (JSON.parse(r.images) as string[]).forEach((u) => removeUploadFile(u));
-    } catch {
-      /* 忽略 */
-    }
+  if (!row) return;
+  const paths = attachmentTransaction(() => {
+    const replyImgRows = db.prepare("SELECT images FROM replies WHERE thread_id = ? AND images != ''")
+      .all(threadId) as { images: string }[];
+    const urls = [row, ...replyImgRows].flatMap(({ images }) => {
+      try {
+        const parsed: unknown = JSON.parse(images || "[]");
+        return Array.isArray(parsed) ? parsed.filter((url): url is string => typeof url === "string") : [];
+      } catch {
+        return [];
+      }
+    });
+    deleteThreadAttachments(threadId);
+    db.prepare("DELETE FROM notifications WHERE thread_id = ?").run(threadId);
+    db.prepare("DELETE FROM replies WHERE thread_id = ?").run(threadId);
+    db.prepare("DELETE FROM thread_likes WHERE thread_id = ?").run(threadId);
+    db.prepare("DELETE FROM thread_favorites WHERE thread_id = ?").run(threadId);
+    db.prepare("DELETE FROM threads WHERE id = ?").run(threadId);
+    return urls;
   });
-  db.prepare("DELETE FROM replies WHERE thread_id = ?").run(threadId);
-  db.prepare("DELETE FROM thread_likes WHERE thread_id = ?").run(threadId);
-  db.prepare("DELETE FROM thread_favorites WHERE thread_id = ?").run(threadId);
-  db.prepare("DELETE FROM threads WHERE id = ?").run(threadId);
+  await Promise.all(paths.map(removeUploadFile));
   revalidatePath("/", "layout");
 }
 
@@ -150,14 +154,6 @@ export async function toggleFeatureAction(formData: FormData): Promise<void> {
 
 /* ---------------- 站点设置 ---------------- */
 
-const BADGE_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "image/svg+xml": "svg",
-};
-
 export async function uploadBadgeAction(
   _prev: ActionState,
   formData: FormData
@@ -167,14 +163,15 @@ export async function uploadBadgeAction(
   const file = formData.get("badge");
   if (!(file instanceof File) || file.size === 0) return fail("请先选择一张图片");
   if (file.size > 2 * 1024 * 1024) return fail("图片不能超过 2MB");
-  const ext = BADGE_EXT[file.type];
-  if (!ext) return fail("仅支持 JPG / PNG / WEBP / GIF / SVG 格式，建议使用方形透明底图片");
-
-  const name = `badge-${crypto.randomBytes(6).toString("hex")}.${ext}`;
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  fs.writeFileSync(path.join(UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
-
-  setSetting("site_badge", `/uploads/${name}`);
+  let url: string;
+  try {
+    url = await saveUploadImage(file, "badge");
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "图片保存失败");
+  }
+  const old = getSetting("site_badge");
+  setSetting("site_badge", url);
+  await removeUploadFile(old);
   revalidatePath("/", "layout");
   return okMsg("站点徽章已更新，全站生效");
 }
@@ -194,7 +191,7 @@ export async function removeBadgeAction(): Promise<void> {
   revalidatePath("/", "layout");
 }
 
-/* ---------------- 校友名单（免审核注册白名单） ---------------- */
+/* ---------------- 校友名单（人工审核参考） ---------------- */
 
 export async function importWhitelistAction(
   _prev: ActionState,
@@ -245,5 +242,15 @@ export async function deleteWhitelistAction(formData: FormData): Promise<void> {
   const id = Number(formData.get("whitelist_id"));
   if (!id) return;
   db.prepare("DELETE FROM whitelist WHERE id = ?").run(id);
+  revalidatePath("/", "layout");
+}
+
+/** Only reviewed grade changes may change access to grade boards. */
+export async function setUserGradeAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = Number(formData.get("user_id"));
+  const grade = String(formData.get("grade") ?? "");
+  if (!Number.isSafeInteger(userId) || userId <= 0 || !["", ...GRADES].includes(grade)) return;
+  db.prepare("UPDATE users SET grade = ? WHERE id = ?").run(grade, userId);
   revalidatePath("/", "layout");
 }

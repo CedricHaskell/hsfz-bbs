@@ -28,12 +28,13 @@ export function ProfileForm({
   nickname,
   bio,
   grade,
-  phone,
+  phoneMask,
 }: {
   nickname: string;
   bio: string;
   grade: string;
-  phone: string;}) {
+  phoneMask: string;
+}) {
   const [state, formAction] = useActionState(updateProfileAction, null);
   return (
     <form action={formAction} className="space-y-4 p-4">
@@ -44,33 +45,30 @@ export function ProfileForm({
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">年级</label>
-        <select name="grade" defaultValue={grade} className="input">
-          <option value="">未填写</option>
-          {["初一", "初二", "初三", "高一", "高二", "高三", "已毕业", "其他"].map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
+        <input type="hidden" name="grade" value={grade} />
+        <p className="text-sm">{grade || "未填写"}</p>
+        <p className="mt-1 text-xs text-muted">需要更正年级时，请通过「我的消息」发工单，由管理员核实后修改。</p>
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">绑定手机号（用于找回密码）</label>
+        <label className="mb-1 block text-sm font-medium">绑定手机号</label>
         <input
           name="phone"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel"
           maxLength={11}
-          defaultValue={phone}
           className="input"
-          placeholder="11 位手机号"
+          placeholder={phoneMask || "11 位手机号"}
         />
         <p className="mt-1 text-xs text-muted">
-          修改绑定需在下方输入当前登录密码确认；不修改则无需填写密码。
+          留空保留当前手机号；绑定或更换时需输入当前密码。
         </p>
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">
-          当前登录密码<span className="ml-1 text-xs text-muted">（仅修改绑定手机号时需要填写）</span>
+          当前登录密码<span className="ml-1 text-xs text-muted">（绑定或更换手机号时填写）</span>
         </label>
-        <input name="bind_password" type="password" className="input" placeholder="选填" />
+        <input name="bind_password" type="password" autoComplete="current-password" className="input" placeholder="选填" />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">个性签名</label>
@@ -94,11 +92,11 @@ export function PasswordForm() {
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">新密码</label>
-        <input name="new_password" type="password" required minLength={6} className="input" placeholder="至少 6 位" />
+        <input name="new_password" type="password" required minLength={8} className="input" placeholder="至少 8 位" />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">确认新密码</label>
-        <input name="new_password2" type="password" required minLength={6} className="input" placeholder="再输入一次" />
+        <input name="new_password2" type="password" required minLength={8} className="input" placeholder="再输入一次" />
       </div>
       <div className="flex justify-end">
         <SubmitButton>修改密码</SubmitButton>

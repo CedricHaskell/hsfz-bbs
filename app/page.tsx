@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { allBoards, latestThreads, hotThreads, siteStats, threadsSorted, announcementThreads } from "@/lib/queries";
+import { allBoards, hotThreads, siteStats, threadsSorted, announcementThreads } from "@/lib/queries";
 import { ThreadList } from "@/components/ThreadList";
 import { fmtNum } from "@/lib/format";
 
@@ -31,23 +31,23 @@ export default async function HomePage({
   const { sort: sortParam } = await searchParams;
   const sort = SORTS.some((s) => s.key === sortParam) ? (sortParam as string) : "latest";
   const user = await getCurrentUser();
-  const boards = allBoards();
+  const boards = user ? allBoards() : [];
   const grouped = CAT_ORDER.map((cat) => ({ cat, items: boards.filter((b) => b.category === cat) })).filter(
     (g) => g.items.length
   );
-  const threads = threadsSorted(sort, 25);
-  const hot = hotThreads(5);
+  const threads = user ? threadsSorted(sort, 25) : [];
+  const hot = user ? hotThreads(5) : [];
   const announcements = user ? [] : announcementThreads(5);
-  const stats = siteStats();
+  const stats = user ? siteStats() : null;
 
   return (
     <div className="space-y-6">
-      <section>
+      {user && <section>
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-base font-semibold">板块导航</h2>
           <span className="text-xs text-muted">共 {boards.length} 个板块</span>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {grouped.map(({ cat, items }) => (
             <div key={cat} className="card p-3">
               <p className="mb-2 text-xs font-semibold text-muted">
@@ -58,7 +58,7 @@ export default async function HomePage({
                   <li key={b.id}>
                     <Link
                       href={`/b/${b.slug}`}
-                      className="group flex items-center justify-between gap-1 text-sm"
+                      className="group flex items-center justify-between gap-1 text-sm leading-6"
                       title={b.description}
                     >
                       <span className="min-w-0 truncate group-hover:text-brand group-hover:underline">
@@ -72,7 +72,7 @@ export default async function HomePage({
             </div>
           ))}
         </div>
-      </section>
+      </section>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <section className="card min-w-0">
@@ -155,7 +155,7 @@ export default async function HomePage({
           </div>
           )}
 
-          <div className="card">
+          {stats && <div className="card">
             <div className="card-header">📊 站点统计</div>
             <dl className="grid grid-cols-2 gap-y-3 p-4 text-sm">
               <dt className="text-muted">注册同学</dt>
@@ -167,7 +167,7 @@ export default async function HomePage({
               <dt className="text-muted">24 小时新帖</dt>
               <dd className="text-right font-semibold">{fmtNum(stats.recent)}</dd>
             </dl>
-          </div>
+          </div>}
 
           <div className="card p-4 text-center">
             <p className="text-sm font-medium tracking-[0.3em] text-ink">进德修业</p>

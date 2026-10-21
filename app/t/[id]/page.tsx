@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { threadById, threadReplies } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
+import { allowAction } from "@/lib/ratelimit";
 import { Avatar } from "@/components/Avatar";
 import { TitleBadge } from "@/components/TitleBadge";
 import { SubmitButton, ConfirmSubmit } from "@/components/SubmitButton";
@@ -15,6 +16,8 @@ import {
 } from "@/app/actions/forum";
 import { ReplyForm } from "@/components/ReplyForm";
 import { Markdown } from "@/components/Markdown";
+import { AttachmentList } from "@/components/AttachmentList";
+import { attachmentsForThread } from "@/lib/attachments";
 import {
   togglePinAction,
   toggleFeatureAction,
@@ -24,7 +27,8 @@ import {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const thread = threadById(Number(id));
-  return { title: thread ? thread.title : "帖子" };
+  const user = await getCurrentUser();
+  return { title: thread && (user || thread.slug === "announcements") ? thread.title : "帖子" };
 }
 
 export default async function ThreadPage({
@@ -36,15 +40,25 @@ export default async function ThreadPage({
 }) {
   const { id } = await params;
   const { quote: quoteParam } = await searchParams;
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
   const tid = Number(id);
   if (!Number.isInteger(tid) || tid <= 0) notFound();
   const thread = threadById(tid);
   if (!thread) notFound();
+  const user = await getCurrentUser();
+  if (!user && thread.slug !== "announcements") redirect("/login");
 
-  db.prepare("UPDATE threads SET views = views + 1 WHERE id = ?").run(tid);
-  const replies = threadReplies(tid);
+  if (user && allowAction(`view:${user.id}:${tid}`, 300_000).ok) {
+    db.prepare("UPDATE threads SET views = views + 1 WHERE id = ?").run(tid);
+  }
+  const replies = user ? threadReplies(tid) : [];
+  const attachments = attachmentsForThread(tid);
+  const attachmentsByReply = new Map<number, typeof attachments>();
+  for (const attachment of attachments) {
+    if (!user && attachment.replyId !== 0) continue;
+    const group = attachmentsByReply.get(attachment.replyId) ?? [];
+    group.push(attachment);
+    attachmentsByReply.set(attachment.replyId, group);
+  }
   let postImages: string[] = [];
   try {
     postImages = thread.images ? (JSON.parse(thread.images) as string[]) : [];
@@ -147,29 +161,37 @@ export default async function ThreadPage({
             <Markdown content={thread.content} className="mt-2 text-[15px] leading-7" />
             {postImages.length > 0 && (
               <div className={`mt-3 grid gap-2 ${postImages.length === 1 ? "" : "grid-cols-2 sm:grid-cols-3"}`}>
-                {postImages.map((src) => (
-                  <a
-                    key={src}
-                    href={src}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block overflow-hidden rounded-md border-[1.5px] border-line bg-soft"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt="帖子图片"
-                      loading="lazy"
-                      className={
-                        postImages.length === 1
-                          ? "max-h-[480px] w-full object-contain"
-                          : "h-40 w-full object-cover"
-                      }
-                    />
-                  </a>
+                {postImages.map((src, index) => (
+                  <div key={src}>
+                    <a
+                      href={src}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block overflow-hidden rounded-md border-[1.5px] border-line bg-soft"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt="帖子图片"
+                        loading="lazy"
+                        className={
+                          postImages.length === 1
+                            ? "max-h-[480px] w-full object-contain"
+                            : "h-40 w-full object-cover"
+                        }
+                      />
+                    </a>
+                    <a
+                      href={`${src}?download=1`}
+                      download
+                      className="mt-1 inline-block text-xs text-brand hover:underline"
+                      aria-label={`下载帖子图片 ${index + 1}`}
+                    >下载</a>
+                  </div>
                 ))}
               </div>
             )}
+            <AttachmentList attachments={attachmentsByReply.get(0) ?? []} />
           </div>
         </div>
 
@@ -243,7 +265,7 @@ export default async function ThreadPage({
       <section className="card mt-4">
         <div className="card-header">💬 全部回复（{replies.length}）</div>
         {replies.length === 0 ? (
-          <p className="px-4 py-10 text-center text-muted">还没有回复，抢个沙发？</p>
+          <p className="px-4 py-10 text-center text-muted">{user ? "还没有回复，抢个沙发？" : "登录后查看同学回复"}</p>
         ) : (
           <ol className="divide-y-[1.5px] divide-line">
             {replies.map((r, i) => (
@@ -293,26 +315,34 @@ export default async function ThreadPage({
                     if (!imgs.length) return null;
                     return (
                       <div className={`mt-2 grid gap-2 ${imgs.length === 1 ? "" : "grid-cols-2"}`}>
-                        {imgs.map((src) => (
-                          <a
-                            key={src}
-                            href={src}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block overflow-hidden rounded-md border-[1.5px] border-line bg-soft"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={src}
-                              alt="回复图片"
-                              loading="lazy"
-                              className="max-h-64 w-full object-cover"
-                            />
-                          </a>
+                        {imgs.map((src, index) => (
+                          <div key={src}>
+                            <a
+                              href={src}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block overflow-hidden rounded-md border-[1.5px] border-line bg-soft"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={src}
+                                alt="回复图片"
+                                loading="lazy"
+                                className="max-h-64 w-full object-cover"
+                              />
+                            </a>
+                            <a
+                              href={`${src}?download=1`}
+                              download
+                              className="mt-1 inline-block text-xs text-brand hover:underline"
+                              aria-label={`下载回复图片 ${index + 1}`}
+                            >下载</a>
+                          </div>
                         ))}
                       </div>
                     );
                   })()}
+                  <AttachmentList attachments={attachmentsByReply.get(r.id) ?? []} />
                 </div>
               </li>
             ))}
@@ -329,10 +359,10 @@ export default async function ThreadPage({
             🔒 「{thread.board_name}」是年级群，仅限{thread.grade_lock}同学回复
             {user.grade ? `（你当前是${user.grade}）` : "（你还未填写年级）"}
             ，可在{" "}
-            <Link href="/settings" className="link">
-              账号设置
+            <Link href="/messages" className="link">
+              我的消息
             </Link>{" "}
-            中确认年级；如有需要传达的消息，请找管理员代发。
+            发工单申请更正年级；如有需要传达的消息，请找管理员代发。
           </div>
         )
       ) : (

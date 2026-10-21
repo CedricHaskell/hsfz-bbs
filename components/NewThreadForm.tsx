@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState, type FormEvent } from "react";
 import { createThreadAction } from "@/app/actions/forum";
 import type { ActionState } from "@/app/actions/auth";
 import type { BoardRow } from "@/lib/queries";
@@ -9,6 +9,8 @@ import { formatEditorSelection, type EditorCommand } from "@/lib/editor";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { ImagePicker } from "./ImagePicker";
 import { SubmitButton } from "./SubmitButton";
+import { AttachmentPicker } from "./AttachmentPicker";
+import { DOCUMENT_LIMITS } from "@/lib/attachment-limits";
 
 const CAT_ORDER = ["学习成长", "年级群", "生活娱乐", "球友", "游戏", "交易互助", "情感联结", "官方"];
 const CAT_EMOJI: Record<string, string> = {
@@ -35,6 +37,20 @@ export function NewThreadForm({
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState("");
   const [preview, setPreview] = useState(false);
+  const [imagesBusy, setImagesBusy] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  function validateUploads(event: FormEvent<HTMLFormElement>) {
+    const data = new FormData(event.currentTarget);
+    const total = [...data.getAll("images"), ...data.getAll("attachments")]
+      .reduce<number>((size, value) => size + (value instanceof File ? value.size : 0), 0);
+    if (imagesBusy || total > DOCUMENT_LIMITS.maxSubmissionBytes) {
+      event.preventDefault();
+      setUploadError(imagesBusy ? "图片处理中，请稍候" : `图片和附件合计不能超过 ${DOCUMENT_LIMITS.maxSubmissionBytes / 1024 / 1024} MB，请减少文件后重试`);
+    } else {
+      setUploadError("");
+    }
+  }
 
   const TOOLBAR: Array<{ cmd: EditorCommand; label: string; title: string }> = [
     { cmd: "bold", label: "B", title: "加粗" },
@@ -56,12 +72,12 @@ export function NewThreadForm({
       { value: el.value, start: el.selectionStart ?? 0, end: el.selectionEnd ?? 0 },
       cmd
     );
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
-    setter.call(el, next.value);
-    el.selectionStart = next.start;
-    el.selectionEnd = next.end;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.focus();
+    setContent(next.value);
+    requestAnimationFrame(() => {
+      el.selectionStart = next.start;
+      el.selectionEnd = next.end;
+      el.focus();
+    });
   }
   const visible = isAdmin ? boards : boards.filter((b) => b.slug !== "announcements");
 
@@ -80,7 +96,8 @@ export function NewThreadForm({
   }
 
   return (
-    <form action={formAction} className="space-y-4 p-4">
+    <form action={formAction} onSubmit={validateUploads} onReset={(event) => event.preventDefault()} className="space-y-4 p-4">
+      {uploadError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
       {state && !state.ok && (
         <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
           {state.message}
@@ -173,14 +190,15 @@ export function NewThreadForm({
               name="content"
               required
               minLength={2}
+              maxLength={20000}
               rows={10}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="input resize-y pr-10"
-              placeholder="支持 Markdown · @用户名 · $LaTeX$ 公式"
+              placeholder="正文"
             />
             <div className="absolute right-2 top-2">
-              <EmojiPicker targetRef={contentRef} />
+              <EmojiPicker targetRef={contentRef} onChange={setContent} />
             </div>
           </div>
           </div>
@@ -190,9 +208,7 @@ export function NewThreadForm({
             </div>
           )}
         </div>
-        <p className="mt-1.5 text-xs text-muted">
-          支持 Markdown 语法、@用户名 提及、$LaTeX$ 公式（$x^2$）、表情。请友善发言（遵守社区公约）。
-        </p>
+        <p className="mt-1.5 text-xs text-muted">请友善发言（遵守社区公约）。</p>
       </div>
       {isConfession && (
         <label className="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-line bg-soft/60 px-3 py-2.5 text-sm">
@@ -204,14 +220,15 @@ export function NewThreadForm({
         </label>
       )}
       <div>
-        <label className="mb-1 block text-sm font-medium">图片（最多 4 张，自动压缩）</label>
-        <ImagePicker max={4} />
-        <p className="mt-1.5 text-xs text-muted">
-          支持 JPG / PNG / WEBP / GIF，上传前自动压缩，共 4 张以内。
-        </p>
+        <label className="mb-1 block text-sm font-medium">图片</label>
+        <ImagePicker max={4} onBusyChange={setImagesBusy} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">附件</label>
+        <AttachmentPicker />
       </div>
       <div className="flex justify-end">
-        <SubmitButton pendingText="发布中…">🚀 发布帖子</SubmitButton>
+        <SubmitButton disabled={imagesBusy} pendingText="发布中…">🚀 发布帖子</SubmitButton>
       </div>
     </form>
   );

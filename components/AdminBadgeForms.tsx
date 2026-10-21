@@ -42,12 +42,12 @@ export function BadgeUploadForm() {
       <input
         type="file"
         name="badge"
-        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+        accept="image/jpeg,image/png,image/webp,image/gif"
         required
         className="block w-full cursor-pointer rounded-md border-[1.5px] border-line bg-input text-sm file:mr-3 file:cursor-pointer file:rounded-l-md file:border-0 file:border-r file:border-line file:bg-soft file:px-3 file:py-2 file:text-sm file:font-medium"
       />
       <p className="text-xs text-muted">
-        支持 JPG / PNG / WEBP / GIF / SVG，≤2MB。建议上传学校官方校徽的方形图片，展示时会按圆形裁剪，全站顶栏与登录页即时生效。
+        支持 JPG / PNG / WEBP / GIF，≤2MB。建议上传学校官方校徽的方形图片，展示时会按圆形裁剪，全站顶栏与登录页即时生效。
       </p>
       <div className="flex justify-end">
         <SubmitButton>上传徽章</SubmitButton>

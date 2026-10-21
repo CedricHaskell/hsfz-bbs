@@ -28,7 +28,7 @@ export function WhitelistImportForm() {
         placeholder={"每行一条，逗号分隔，年级可省略：\n张远航, 20250101, 已毕业\n林小满, 20270215, 高二"}
       />
       <p className="text-xs text-muted">
-        名单内的同学注册时填写匹配的姓名 + 学号即可<strong>免审核直接开通</strong>；每个学号只能使用一次。
+        姓名与学号仅作为审核参考，所有新注册账号均需管理员核实后批准；请同时核实申请年级。
       </p>
       <div className="flex justify-end">
         <SubmitButton>📥 导入名单</SubmitButton>

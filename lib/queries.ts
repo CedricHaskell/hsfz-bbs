@@ -13,8 +13,7 @@ export type ThreadRow = {
 const THREAD_SELECT = `
   SELECT t.*, b.slug, b.name AS board_name, b.icon AS board_icon, b.grade_lock,
          u.nickname AS author_name, u.username AS author_username,
-         u.avatar AS author_avatar, u.custom_title AS author_title,
-         (SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = t.id) AS like_count
+         u.avatar AS author_avatar, u.custom_title AS author_title
   FROM threads t
   JOIN boards b ON b.id = t.board_id
   JOIN users u ON u.id = t.author_id
@@ -44,14 +43,14 @@ export function threadById(id: number): ThreadRow | undefined {
 
 export function hotThreads(limit = 5): ThreadRow[] {
   return rows(
-    `${THREAD_SELECT} ORDER BY t.reply_count * 3 + (SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = t.id) * 2 + t.views * 0.05 DESC LIMIT ?`,
+    `${THREAD_SELECT} ORDER BY t.reply_count * 3 + t.like_count * 2 + t.views * 0.05 DESC LIMIT ?`,
     limit
   );
 }
 
 export function searchThreads(q: string): ThreadRow[] {
-  const like = `%${q}%`;
-  return rows(`${THREAD_SELECT} WHERE t.title LIKE ? OR t.content LIKE ? ORDER BY t.created_at DESC LIMIT 50`, like, like);
+  const like = `%${q.slice(0, 100).replace(/[\\%_]/g, "\\$&")}%`;
+  return rows(`${THREAD_SELECT} WHERE t.title LIKE ? ESCAPE '\\' OR t.content LIKE ? ESCAPE '\\' ORDER BY t.created_at DESC LIMIT 50`, like, like);
 }
 
 export function userThreads(userId: number): ThreadRow[] {
@@ -86,7 +85,7 @@ export function threadReplies(threadId: number) {
         (SELECT COUNT(*) FROM threads th WHERE th.author_id = u.id) +
         (SELECT COUNT(*) FROM replies rp WHERE rp.author_id = u.id) AS post_count
        FROM replies r JOIN users u ON u.id = r.author_id
-       WHERE r.thread_id = ? ORDER BY r.created_at ASC`
+       WHERE r.thread_id = ? ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(threadId) as Array<{
       id: number; content: string; images: string; reply_to: number; created_at: string; nickname: string; username: string;
@@ -124,7 +123,7 @@ export function siteStats() {
       `SELECT (SELECT COUNT(*) FROM users WHERE status='approved' AND banned=0 AND role!='admin') AS users,
               (SELECT COUNT(*) FROM threads) AS threads,
               (SELECT COUNT(*) FROM replies) AS replies,
-              (SELECT COUNT(*) FROM threads WHERE created_at >= date('now','localtime','-1 day')) AS recent`
+              (SELECT COUNT(*) FROM threads WHERE created_at >= datetime('now','localtime','-1 day')) AS recent`
     )
     .get() as { users: number; threads: number; replies: number; recent: number };
 }
@@ -193,12 +192,12 @@ export function openTicketCount(): number {
 export function threadsSorted(sort: string, limit = 25): ThreadRow[] {
   const order =
     sort === "likes"
-      ? "(SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = t.id) DESC"
+      ? "t.like_count DESC"
       : sort === "views"
         ? "t.views DESC"
         : sort === "reply"
           ? "t.reply_count DESC"
-          : "t.is_pinned DESC, COALESCE(NULLIF(t.last_reply_at,''), t.created_at) DESC";
+          : "t.is_pinned DESC, t.created_at DESC";
   return rows(`${THREAD_SELECT} ORDER BY ${order} LIMIT ?`, limit);
 }
 

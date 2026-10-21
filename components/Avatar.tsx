@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { avatarColor } from "@/lib/format";
 
 export function Avatar({
@@ -12,12 +12,10 @@ export function Avatar({
   size?: number;
   className?: string;
 }) {
-  const [broken, setBroken] = useState(false);
-  // 切换对象或头像地址变化时重置加载状态
-  useEffect(() => setBroken(false), [user.avatar, user.username]);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   const style = { width: size, height: size };
-  if (user.avatar && !broken) {
+  if (user.avatar && user.avatar !== failedSrc) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -25,7 +23,7 @@ export function Avatar({
         alt={user.nickname}
         loading="lazy"
         style={style}
-        onError={() => setBroken(true)}
+        onError={() => setFailedSrc(user.avatar ?? null)}
         className={`shrink-0 rounded-md border-[1.5px] border-line bg-card object-cover ${className}`}
       />
     );
