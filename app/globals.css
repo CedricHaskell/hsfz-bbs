@@ -146,20 +146,21 @@ body {
 /* ============ 多主题：原版青绿 / 蔚蓝（覆盖 Discourse 变量层的语义映射） ============ */
 [data-theme="teal"] {
   color-scheme: light;
-  --primary: #1f3d38;
-  --secondary: #ffffff;
-  --tertiary: #148f77;
-  --tertiary-hover: #0e7490;
+  /* 最初版配色：整页青绿色调 */
+  --bg: #f4fafb;
+  --fg: #24292f;
+  --mut: #5b7280;
+  --bd: #d5e5e8;
+  --card: #ffffff;
+  --soft: #eef6f8;
+  --input: #ffffff;
+  --link: #0369a1;
+  --brand: #0e7490;
+  --brand-dark: #155e75;
+  --tertiary: #0e7490;
+  --tertiary-hover: #155e75;
   --header_background: #148f77;
   --header_primary: #ffffff;
-  --primary-medium: #5f7d76;
-  --primary-low: #dcebe7;
-  --primary-very-low: #eef6f3;
-  --primary-very-high: #f2faf7;
-  --d-hover: #e8f3f0;
-  --danger: #c0392b;
-  --success: #148f77;
-  --quaternary: #b7791f;
 }
 [data-theme="teal"] header {
   background: linear-gradient(135deg, #1a5276 0%, #148f77 100%);

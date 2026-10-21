@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 const PRESETS = [
   { key: "teal", label: "原版青绿", icon: "🟢" },
   { key: "blue", label: "蔚蓝", icon: "🔵" },
-  { key: "discourse", label: "清爽", icon: "🎨" },
+  { key: "discourse", label: "清爽", icon: "⚪" },
   { key: "dark", label: "深色", icon: "🌙" },
 ];
 
