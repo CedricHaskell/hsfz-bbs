@@ -9,7 +9,7 @@ import {
 } from "@/lib/queries";
 import { userPostCount } from "@/lib/db";
 import { getCurrentUser, requireUser } from "@/lib/auth";
-import { followStats } from "@/lib/queries";
+import { followStats, followList } from "@/lib/queries";
 import { toggleFollowAction } from "@/app/actions/follow";
 import { Avatar } from "@/components/Avatar";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -59,7 +59,16 @@ export default async function UserProfilePage({
   const nextLevel = levelIndex > 0 ? LEVELS[levelIndex - 1] : null;
   const progress = nextLevel ? Math.min(100, Math.round((postCount / nextLevel.min) * 100)) : 100;
 
-  const activeTab = isSelf && tab === "favorites" ? "favorites" : tab === "replies" ? "replies" : "threads";
+  const followingList = followList(profile.id, "following");
+  const followersList = followList(profile.id, "followers");
+  const activeTab =
+    tab === "replies"
+      ? "replies"
+      : isSelf && tab === "favorites"
+        ? "favorites"
+        : tab === "following" || tab === "followers"
+          ? tab
+          : "threads";
   const threads = userThreads(profile.id);
   const replies = userReplies(profile.id);
   const favorites = isSelf ? userFavorites(profile.id) : [];
@@ -148,10 +157,31 @@ export default async function UserProfilePage({
           <TabLink username={profile.username} activeTab={activeTab} name="threads" label="帖子" count={threads.length} />
           <TabLink username={profile.username} activeTab={activeTab} name="replies" label="回复" count={replies.length} />
           {isSelf && <TabLink username={profile.username} activeTab={activeTab} name="favorites" label="我的收藏" count={favorites.length} />}
+          <TabLink username={profile.username} activeTab={activeTab} name="following" label="关注" count={fstats.following} />
+          <TabLink username={profile.username} activeTab={activeTab} name="followers" label="粉丝" count={fstats.followers} />
         </div>
 
         {activeTab === "threads" && <ThreadList threads={threads} />}
         {activeTab === "favorites" && <ThreadList threads={favorites} />}
+        {(activeTab === "following" || activeTab === "followers") && (
+          <div className="card divide-y divide-line">
+            {(activeTab === "following" ? followingList : followersList).length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted">
+                {activeTab === "following" ? "还没有关注任何人" : "还没有粉丝，发帖互动就会有了"}
+              </p>
+            ) : (
+              (activeTab === "following" ? followingList : followersList).map((u) => (
+                <Link key={u.id} href={`/u/${u.username}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft/60">
+                  <Avatar user={u} size={36} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{u.nickname}</p>
+                    <p className="text-xs text-muted">@{u.username}</p>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        )}
         {activeTab === "replies" && (
           <ul className="divide-y-[1.5px] divide-line">
             {replies.length === 0 && (

@@ -304,6 +304,26 @@ function ensureGradeBoards() {
     `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort)
      VALUES ('literature', '文学创作', '散文、诗歌、小说——写下属于你的故事', '✍️', '学习成长', 16)`
   ).run();
+
+  // 大学分区：毕业生按母校讨论（不限年级，所有人都能参与）
+  const universities: Array<[string, string, string]> = [
+    ["sysu", "中山大学", "🎓"],
+    ["scut", "华南理工大学", "🏛️"],
+    ["jnu", "暨南大学", "🌏"],
+    ["scnu", "华南师范大学", "🌸"],
+    ["szu", "深圳大学", "🌊"],
+    ["gdut", "广东工业大学", "⚙️"],
+    ["gwng", "广东外语外贸", "🌐"],
+    ["other-gd", "其他广东高校", "🧭"],
+    ["outside", "省外高校", "🚄"],
+  ];
+  const insUniv = db.prepare(
+    `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort, grade_lock)
+     VALUES (?, ?, ?, ?, '大学', ?, '')`
+  );
+  universities.forEach(function (u, i) {
+    insUniv.run(u[0], u[1], u[1] + "的华附人，在这里集合", u[2], 30 + i);
+  });
   // 游戏分区：游戏讨论
   db.prepare(
     `INSERT OR IGNORE INTO boards (slug, name, description, icon, category, sort)

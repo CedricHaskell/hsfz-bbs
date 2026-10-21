@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { allBoards, hotThreads, siteStats, threadsSorted, announcementThreads } from "@/lib/queries";
+import { allBoards, hotThreads, siteStats, threadsSorted, announcementThreads, featuredThreads } from "@/lib/queries";
 import { ThreadList } from "@/components/ThreadList";
 import { fmtNum } from "@/lib/format";
 
-const CAT_ORDER = ["学习成长", "年级群", "生活娱乐", "球友", "游戏", "交易互助", "情感联结", "官方"];
+const CAT_ORDER = ["学习成长", "年级群", "大学", "生活娱乐", "球友", "游戏", "交易互助", "情感联结", "官方"];
 const CAT_EMOJI: Record<string, string> = {
   学习成长: "📖",
   年级群: "🎓",
   生活娱乐: "🎨",
+  大学: "🎓",
   球友: "🏀",
   游戏: "🎮",
   交易互助: "🤝",
@@ -21,6 +22,17 @@ const SORTS = [
   { key: "reply", label: "最多回复" },
   { key: "likes", label: "最多点赞" },
   { key: "views", label: "最多浏览" },
+];
+
+const GRADS = [
+  "bg-gradient-to-br from-[#1a5276] to-[#148f77]",
+  "bg-gradient-to-br from-[#5b21b6] to-[#7c3aed]",
+  "bg-gradient-to-br from-[#9d174d] to-[#be185d]",
+  "bg-gradient-to-br from-[#92400e] to-[#d97706]",
+  "bg-gradient-to-br from-[#1e40af] to-[#2563eb]",
+  "bg-gradient-to-br from-[#065f46] to-[#059669]",
+  "bg-gradient-to-br from-[#7c2d12] to-[#c2410c]",
+  "bg-gradient-to-br from-[#334155] to-[#475569]",
 ];
 
 export default async function HomePage({
@@ -37,6 +49,7 @@ export default async function HomePage({
   );
   const threads = user ? threadsSorted(sort, 25) : [];
   const hot = user ? hotThreads(5) : [];
+  const featured = featuredThreads(8);
   const announcements = user ? [] : announcementThreads(5);
   const stats = user ? siteStats() : null;
 
@@ -73,6 +86,36 @@ export default async function HomePage({
           ))}
         </div>
       </section>}
+
+      {featured.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-base font-semibold">🔥 精选速览</h2>
+            <span className="text-xs text-muted">左右滑动查看更多 →</span>
+          </div>
+          <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
+            {featured.map((t, i) => (
+              <Link
+                key={t.id}
+                href={`/t/${t.id}`}
+                className={`w-64 shrink-0 snap-start rounded-lg border-[1.5px] border-line p-4 transition-transform hover:scale-[1.02] ${GRADS[i % GRADS.length]}`}
+              >
+                <div className="flex items-center gap-2 text-xs text-white/85">
+                  <span className="pill bg-white/20 text-white">{t.board_icon} {t.board_name}</span>
+                  {t.is_pinned === 1 && <span>置顶</span>}
+                  {t.is_featured === 1 && <span>精华</span>}
+                </div>
+                <p className="mt-2 line-clamp-2 min-h-11 font-semibold text-white">{t.title}</p>
+                <p className="mt-2 flex gap-3 text-xs text-white/75">
+                  <span>💬 {t.reply_count}</span>
+                  <span>❤️ {t.like_count}</span>
+                  <span>👁 {t.views}</span>
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <section className="card min-w-0">

@@ -208,3 +208,31 @@ export function announcementThreads(limit = 5): ThreadRow[] {
     limit
   );
 }
+
+/** 首页精选速览：置顶 + 精华 + 高热度，去重取前 N */
+export function featuredThreads(limit = 8): ThreadRow[] {
+  return rows(
+    `${THREAD_SELECT}
+     WHERE t.is_pinned = 1 OR t.is_featured = 1
+        OR t.reply_count >= 3 OR (SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = t.id) >= 2
+     ORDER BY t.is_pinned DESC, t.is_featured DESC,
+              t.reply_count * 3 + (SELECT COUNT(*) FROM thread_likes l WHERE l.thread_id = t.id) * 2 + t.views * 0.05 DESC
+     LIMIT ?`,
+    limit
+  );
+}
+
+export function followList(userId: number, type: "following" | "followers") {
+  const joinCond =
+    type === "following"
+      ? "JOIN users u ON u.id = f.following_id WHERE f.follower_id = ?"
+      : "JOIN users u ON u.id = f.follower_id WHERE f.following_id = ?";
+  return db
+    .prepare(
+      `SELECT u.id, u.username, u.nickname, u.avatar, u.custom_title, f.created_at AS followed_at
+       FROM follows f ${joinCond} ORDER BY f.created_at DESC`
+    )
+    .all(userId) as Array<{
+      id: number; username: string; nickname: string; avatar: string; custom_title: string; followed_at: string;
+    }>;
+}
